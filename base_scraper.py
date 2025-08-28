@@ -1,4 +1,7 @@
-class BaseScraper:
+from abc import ABC, abstractmethod
+
+
+class BaseScraper(ABC):
     """
     Base class for web scrapers.
 
@@ -15,7 +18,9 @@ class BaseScraper:
             page: Playwright Page object used for web interactions.
         """
         self.page = page
+        self.all_jobs = []
 
+    @abstractmethod
     def search(self, keywords, location):
         """
         Perform a job search on the website.
@@ -27,17 +32,19 @@ class BaseScraper:
         Raises:
             NotImplementedError: Must be implemented in subclass.
         """
-        raise NotImplementedError
+        ...
 
-    def get_jobs_listing(self):
+    @abstractmethod
+    def jobs_list(self):
         """
         Retrieve a list of job elements from the search results.
 
         Raises:
             NotImplementedError: Must be implemented in subclass.
         """
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def get_job_details(self):
         """
         Extract details from a single job offer.
@@ -45,8 +52,9 @@ class BaseScraper:
         Raises:
             NotImplementedError: Must be implemented in subclass.
         """
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def next_page(self):
         """
         Navigate to the next page of search results.
@@ -54,8 +62,9 @@ class BaseScraper:
         Raises:
             NotImplementedError: Must be implemented in subclass.
         """
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def accept_cookies(self):
         """
         Accept cookie consent on the website.
@@ -63,8 +72,9 @@ class BaseScraper:
         Raises:
             NotImplementedError: Must be implemented in subclass.
         """
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def get_max_page(self):
         """
         Get the maximum number of pages available in search results.
@@ -72,7 +82,7 @@ class BaseScraper:
         Raises:
             NotImplementedError: Must be implemented in subclass.
         """
-        raise NotImplementedError
+        ...
 
     def go_to_page(self, url):
         """
