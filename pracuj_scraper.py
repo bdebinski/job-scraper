@@ -1,4 +1,6 @@
-from playwright.sync_api import Locator
+import asyncio
+
+from playwright.async_api import Locator
 
 from base_scraper import BaseScraper
 
@@ -21,11 +23,11 @@ class PracujScraper(BaseScraper):
     offer_salary = "[data-test=\"text-earningAmount\"]"
     offer_position_name = "[data-test=\"text-positionName\"]"
 
-    def navigate(self) -> None:
+    async def navigate(self) -> None:
         """Navigate to the main page of pracuj.pl."""
-        self.go_to_page("http://pracuj.pl")
+        await self.go_to_page("http://pracuj.pl")
 
-    def search(self, keywords, location) -> None:
+    async def search(self, keywords, location) -> None:
         """
         Enter keywords and execute job search.
 
@@ -33,70 +35,87 @@ class PracujScraper(BaseScraper):
             keywords (str): The search keywords.
             location (str): The location for job search (currently unused in method).
         """
-        self.type_text(self.search_locator, keywords)
-        self.click_locator(self.search_button)
+        await self.type_text(self.search_locator, keywords)
+        await self.click_locator(self.search_button)
 
-    def accept_cookies(self) -> None:
+    async def accept_cookies(self) -> None:
         """Accept cookie consent on the website."""
-        self.click_locator(self.cookie_locator)
+        await self.click_locator(self.cookie_locator)
 
-    def jobs_list(self) -> Locator:
+    async def jobs_list(self) -> list:
         """
         Retrieve a list of job offer elements from the current page.
 
         Returns:
             Locator: Playwright locator containing all job offer elements.
         """
-        self.page.locator(self.section_offers_locator).locator('[data-test="link-offer"]').first.wait_for()
-        return self.page.locator(self.section_offers_locator).locator('[data-test="link-offer"]')
+        locator = self.page.locator(self.section_offers_locator).locator('[data-test="link-offer"]')
+        await locator.first.wait_for(timeout=5000)
+        all_offers = await locator.all()
+        urls = []
+        for offer_locator in all_offers:
+            href = await offer_locator.get_attribute("href")
+            if href:
+                urls.append(href)
 
-    def extract_job_data(self) -> None:
+        return urls
+
+    async def scrape_single_offer(self, url:str) -> dict | None:
+        offer_page = await self.browser.new_page()
+        await offer_page.goto(url)
+        await offer_page.locator(self.cookie_locator).click()
+        job_data = {
+            "employer": await self.get_employer_name(offer_page),
+            "position": await self.get_position_name(offer_page),
+            "earning": await self.get_earning_amount(offer_page),
+            "requirements": await self.get_job_requirement(offer_page),
+            "url": await self.get_url(offer_page)
+        }
+        print(job_data)
+        await offer_page.close()
+        return job_data
+
+    async def extract_job_data(self) -> None:
         """
         Iterate through all pages and offers to extract job data.
 
         Stores extracted jobs in the `all_jobs` attribute.
         """
-        max_page = self.get_max_page()
+        max_page = await self.max_page()
         for page_number in range(max_page):
-            offers_list = self.jobs_list()
-            number_of_offers = offers_list.count()
-            for i in range(number_of_offers):
-                offers_list.nth(i).click()
-                job_data = {
-                    "employer": self.get_employer_name(),
-                    "position": self.get_position_name(),
-                    "earning": self.get_earning_amount(),
-                    "requirements": self.get_job_requirement(),
-                    "url": self.get_url()
-                }
-                self.all_jobs.append(job_data)
-                self.page.go_back()
-            if page_number < max_page - 1:
-                self.next_page()
+            offer_urls = await self.jobs_list()
+            tasks = [self.scrape_single_offer(url) for url in offer_urls]
+            results = await asyncio.gather(*tasks)
+            for job_data in results:
+                if job_data:
+                    self.all_jobs.append(job_data)
 
-    def get_position_name(self) -> str:
+            if page_number + 1 < max_page:
+                await self.next_page()
+
+    async def get_position_name(self, page) -> str:
         """Return the position name of the current job offer."""
-        return self.page.locator(self.offer_position_name).inner_text()
+        return await page.locator(self.offer_position_name).inner_text()
 
-    def get_earning_amount(self) -> str:
+    async def get_earning_amount(self, page) -> str:
         """Return the earning amount of the current job offer as a single string."""
-        elements = self.page.locator(self.offer_salary)
-        earning_amount = elements.all_inner_texts()
+        elements = page.locator(self.offer_salary)
+        earning_amount =  await elements.all_inner_texts()
         return "".join(earning_amount)
 
-    def get_job_requirement(self) -> str:
+    async def get_job_requirement(self, page) -> str:
         """Return the job requirements of the current job offer."""
-        return self.page.locator(self.offer_requirements).inner_text()
+        return await page.locator(self.offer_requirements).inner_text()
 
-    def get_employer_name(self) -> str:
+    async def get_employer_name(self, page) -> str:
         """Return the employer's name of the current job offer."""
-        return self.page.locator(self.employer_name).inner_text()
+        return await page.locator(self.employer_name).inner_text()
 
-    def get_url(self) -> str:
+    async def get_url(self, page) -> str:
         """Return the URL of the current job offer."""
-        return self.page.url
+        return page.url
 
-    def max_page(self) -> int:
+    async def max_page(self):
         """
         Retrieve the maximum number of pages available for the search.
 
@@ -104,11 +123,14 @@ class PracujScraper(BaseScraper):
             int: Maximum page number. Defaults to 1 if not found.
         """
         try:
-            max_page = int(self.page.locator(self.max_page_locator).inner_text(timeout=100))
+            max_page = await self.page.locator(self.max_page_locator).inner_text(timeout=1000)
         except:
             max_page = 1
         return max_page
 
-    def next_page(self) -> None:
+    async def next_page(self) -> None:
         """Click the button to go to the next page of job listings."""
-        self.page.locator(self.next_page_button).click()
+        await self.page.locator(self.next_page_button).click()
+
+    async def filter_jobs(self):
+        await self.click_locator("[data-test=\"button-sort-type\"]")

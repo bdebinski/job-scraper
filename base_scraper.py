@@ -10,7 +10,7 @@ class BaseScraper(ABC):
     and pagination.
     """
 
-    def __init__(self, page):
+    def __init__(self, page, browser):
         """
         Initialize the scraper with a Playwright page instance.
 
@@ -18,10 +18,11 @@ class BaseScraper(ABC):
             page: Playwright Page object used for web interactions.
         """
         self.page = page
+        self.browser = browser
         self.all_jobs = []
 
     @abstractmethod
-    def search(self, keywords, location):
+    async def search(self, keywords, location):
         """
         Perform a job search on the website.
 
@@ -35,7 +36,7 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    def jobs_list(self):
+    async def jobs_list(self):
         """
         Retrieve a list of job elements from the search results.
 
@@ -45,7 +46,7 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    def get_job_details(self):
+    async def extract_job_data(self):
         """
         Extract details from a single job offer.
 
@@ -55,7 +56,7 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    def next_page(self):
+    async def next_page(self):
         """
         Navigate to the next page of search results.
 
@@ -65,7 +66,7 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    def accept_cookies(self):
+    async def accept_cookies(self):
         """
         Accept cookie consent on the website.
 
@@ -75,7 +76,7 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    def get_max_page(self):
+    async def max_page(self):
         """
         Get the maximum number of pages available in search results.
 
@@ -84,16 +85,20 @@ class BaseScraper(ABC):
         """
         ...
 
-    def go_to_page(self, url):
+    @abstractmethod
+    async def filter_jobs(self):
+        ...
+
+    async def go_to_page(self, url):
         """
         Navigate to a specific URL.
 
         Args:
             url (str): The URL to navigate to.
         """
-        self.page.goto(url)
+        await self.page.goto(url)
 
-    def type_text(self, locator, text):
+    async def type_text(self, locator, text):
         """
         Type text into an input field.
 
@@ -101,13 +106,13 @@ class BaseScraper(ABC):
             locator (str): The locator of the input element.
             text (str): The text to type.
         """
-        self.page.locator(locator).type(text)
+        await self.page.locator(locator).type(text)
 
-    def click_locator(self, locator):
+    async def click_locator(self, locator):
         """
         Click on an element.
 
         Args:
             locator (str): The locator of the element to click.
         """
-        self.page.locator(locator).click()
+        await self.page.locator(locator).click()
