@@ -1,3 +1,4 @@
+import asyncio
 from abc import ABC, abstractmethod
 
 
@@ -45,15 +46,33 @@ class BaseScraper(ABC):
         """
         ...
 
-    @abstractmethod
-    async def extract_job_data(self):
+    async def extract_job_data(self, offer_links_from_sheet: list) -> None:
         """
-        Extract details from a single job offer.
+        Iterate through all pages and offers to extract job data.
 
-        Raises:
-            NotImplementedError: Must be implemented in subclass.
+        Stores extracted jobs in the `all_jobs` attribute.
         """
-        ...
+        max_page = await self.max_page()
+        for page_number in range(max_page):
+            offer_urls = await self.jobs_list()
+            unique_offers_urls = []
+            should_continue_scraping = True
+            for url in offer_urls:
+                if url in offer_links_from_sheet:
+                    print(f"URL already exists: {url}. Stopping further scraping on this page.")
+                    should_continue_scraping = False
+                    break
+                unique_offers_urls.append(url)
+            if not should_continue_scraping:
+                break
+            tasks = [self.scrape_single_offer(url) for url in offer_urls]
+            results = await asyncio.gather(*tasks)
+            for job_data in results:
+                if job_data:
+                    self.all_jobs.append(job_data)
+
+            if page_number + 1 < max_page:
+                await self.next_page()
 
     @abstractmethod
     async def next_page(self):
@@ -85,10 +104,6 @@ class BaseScraper(ABC):
         """
         ...
 
-    @abstractmethod
-    async def filter_jobs(self):
-        ...
-
     async def go_to_page(self, url):
         """
         Navigate to a specific URL.
@@ -116,3 +131,14 @@ class BaseScraper(ABC):
             locator (str): The locator of the element to click.
         """
         await self.page.locator(locator).click()
+
+    @staticmethod
+    def strip_url(url: str) -> str:
+        return url.split("?", 1)[0]
+
+    async def sort_offers_from_newest(self):
+        ...
+
+    @abstractmethod
+    async def scrape_single_offer(self, url):
+        ...
