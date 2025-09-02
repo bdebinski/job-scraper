@@ -50,13 +50,13 @@ class PracujScraper(BaseScraper):
             Locator: Playwright locator containing all job offer elements.
         """
         locator = self.page.locator(self.section_offers_locator).locator('[data-test="link-offer"]')
-        await locator.first.wait_for(timeout=5000)
+        await locator.first.wait_for(timeout=1000)
         all_offers = await locator.all()
         urls = []
         for offer_locator in all_offers:
             href = await offer_locator.get_attribute("href")
             if href:
-                urls.append(href)
+                urls.append(self.strip_url(href))
 
         return urls
 
@@ -75,23 +75,6 @@ class PracujScraper(BaseScraper):
         await offer_page.close()
         return job_data
 
-    async def extract_job_data(self) -> None:
-        """
-        Iterate through all pages and offers to extract job data.
-
-        Stores extracted jobs in the `all_jobs` attribute.
-        """
-        max_page = await self.max_page()
-        for page_number in range(max_page):
-            offer_urls = await self.jobs_list()
-            tasks = [self.scrape_single_offer(url) for url in offer_urls]
-            results = await asyncio.gather(*tasks)
-            for job_data in results:
-                if job_data:
-                    self.all_jobs.append(job_data)
-
-            if page_number + 1 < max_page:
-                await self.next_page()
 
     async def get_position_name(self, page) -> str:
         """Return the position name of the current job offer."""
@@ -113,7 +96,7 @@ class PracujScraper(BaseScraper):
 
     async def get_url(self, page) -> str:
         """Return the URL of the current job offer."""
-        return page.url
+        return self.strip_url(page.url)
 
     async def max_page(self):
         """
@@ -132,5 +115,8 @@ class PracujScraper(BaseScraper):
         """Click the button to go to the next page of job listings."""
         await self.page.locator(self.next_page_button).click()
 
-    async def filter_jobs(self):
-        await self.click_locator("[data-test=\"button-sort-type\"]")
+    async def sort_offers_from_newest(self):
+        await self.page.wait_for_timeout(500)
+        dropdown = self.page.locator("[data-test='button-sort-type']")
+        await dropdown.click()
+        await self.page.get_by_role("treeitem", name="Najnowsze").click()
