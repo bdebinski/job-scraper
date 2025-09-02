@@ -1,5 +1,6 @@
 import gspread
-from gspread import Worksheet, WorksheetNotFound
+from gspread import Worksheet, WorksheetNotFound, SpreadsheetNotFound
+
 
 # columns = ["employer", "position", "earning", "requirements", "url", "status"]
 #
@@ -18,7 +19,7 @@ class GoogleSheetClient:
     def open_spreadsheet(self, sheet_name) -> None:
         try:
             self.spreadsheet =  self.gc.open(sheet_name)
-        except gspread.exceptions.SpreadsheetNotFound:
+        except SpreadsheetNotFound:
             print('Sheet with provided name is not found')
 
     def get_worksheet(self, index: int) -> Worksheet | None:
