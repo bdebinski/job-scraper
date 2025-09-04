@@ -1,19 +1,9 @@
 import gspread
 from gspread import Worksheet, WorksheetNotFound, SpreadsheetNotFound
 
-
-# columns = ["employer", "position", "earning", "requirements", "url", "status"]
-#
-# rows = [[job.get(col, "") for col in columns] for job in jobs]
-# worksheet = sh.get_worksheet(0)
-# worksheet.insert_rows(columns, 1)
-# # check if offer is unique
-# worksheet.insert_rows(rows, 2)
-
-
 class GoogleSheetClient:
     def __init__(self):
-        self.gc = gspread.oauth()
+        self.gc = gspread.service_account('job-scraper-470320-69bdf1515c05.json')
         self.spreadsheet = None
 
     def open_spreadsheet(self, sheet_name) -> None:
