@@ -46,33 +46,9 @@ class BaseScraper(ABC):
         """
         ...
 
-    async def extract_job_data(self, offer_links_from_sheet: list) -> None:
-        """
-        Iterate through all pages and offers to extract job data.
-
-        Stores extracted jobs in the `all_jobs` attribute.
-        """
-        max_page = await self.max_page()
-        for page_number in range(max_page):
-            offer_urls = await self.jobs_list()
-            unique_offers_urls = []
-            should_continue_scraping = True
-            for url in offer_urls:
-                if url in offer_links_from_sheet:
-                    print(f"URL already exists: {url}. Stopping further scraping on this page.")
-                    should_continue_scraping = False
-                    break
-                unique_offers_urls.append(url)
-            if not should_continue_scraping:
-                break
-            tasks = [self.scrape_single_offer(url) for url in offer_urls]
-            results = await asyncio.gather(*tasks)
-            for job_data in results:
-                if job_data:
-                    self.all_jobs.append(job_data)
-
-            if page_number + 1 < max_page:
-                await self.next_page()
+    @abstractmethod
+    async def extract_job_data(self, offer_links_from_sheet: list):
+        ...
 
     @abstractmethod
     async def next_page(self):
