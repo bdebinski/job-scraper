@@ -12,7 +12,12 @@ pipeline {
 
         stage('Run tests') {
             steps {
-                sh 'pipenv run python -m pytest -v tests/'
+                sh 'pipenv run python -m pytest --junitxml=reports/results.xml tests/'
+            }
+            post {
+                always {
+                    junit 'reports/results.xml'
+                }
             }
         }
     }
