@@ -4,7 +4,7 @@ pipeline {
         stage('Uruchom testy') {
             steps {
                 sh 'python3 --version'
-                sh 'pytest tests/'
+                sh 'python3 -m pytest tests/'
             }
         }
     }
