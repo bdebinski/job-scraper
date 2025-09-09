@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional, Dict
 
 from playwright.async_api import Locator
 
@@ -60,7 +61,7 @@ class PracujScraper(BaseScraper):
 
         return urls
 
-    async def scrape_single_offer(self, url:str) -> dict | None:
+    async def scrape_single_offer(self, url:str) -> Optional[Dict]:
         offer_page = await self.browser.new_page()
         await offer_page.goto(url)
         await offer_page.locator(self.cookie_locator).click()

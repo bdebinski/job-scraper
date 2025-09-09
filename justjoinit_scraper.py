@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional, Dict
 
 from playwright.async_api import Locator
 
@@ -64,7 +65,7 @@ class JustJoinItScraper(BaseScraper):
 
         return urls
 
-    async def scrape_single_offer(self, url:str, sem=asyncio.Semaphore(10)) -> dict | None:
+    async def scrape_single_offer(self, url:str, sem=asyncio.Semaphore(10)) -> Optional[Dict]:
         async with sem:
             offer_page = await self.browser.new_page()
             await offer_page.goto(url)
