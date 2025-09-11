@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from base_scraper import BaseScraper
+from scrapers.base_scraper import BaseScraper
 
 
 class DummyScraper(BaseScraper):

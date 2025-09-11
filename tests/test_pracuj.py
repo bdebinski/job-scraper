@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from pracuj_scraper import PracujScraper
+from scrapers.pracuj_scraper import PracujScraper
 
 @pytest.mark.asyncio
 async def test_get_position_name():

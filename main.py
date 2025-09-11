@@ -1,6 +1,6 @@
 from google_sheets_client import GoogleSheetClient
-from justjoinit_scraper import JustJoinItScraper
-from pracuj_scraper import PracujScraper
+from scrapers.justjoinit_scraper import JustJoinItScraper
+from scrapers.pracuj_scraper import PracujScraper
 
 import asyncio
 from playwright.async_api import async_playwright
