@@ -21,6 +21,7 @@ class BaseScraper(ABC):
         self.page = page
         self.browser = browser
         self.all_jobs = []
+        self.sem = asyncio.Semaphore(5)
 
     @abstractmethod
     async def search(self, keywords, location):

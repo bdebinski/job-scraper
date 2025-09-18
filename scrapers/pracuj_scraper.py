@@ -3,7 +3,7 @@ from typing import Optional, Dict
 
 from playwright.async_api import Locator
 
-from base_scraper import BaseScraper
+from .base_scraper import BaseScraper
 
 class PracujScraper(BaseScraper):
     """
