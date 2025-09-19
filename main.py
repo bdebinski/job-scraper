@@ -12,7 +12,7 @@ async def run_scraper(scraper_class, urls):
         scraper = scraper_class(page, browser)
         await scraper.navigate()
         await scraper.accept_cookies()
-        await scraper.search("test python", None)
+        await scraper.search("test python", "Łódź")
         await scraper.sort_offers_from_newest()
         await scraper.extract_job_data(urls)
         await browser.close()
@@ -20,8 +20,6 @@ async def run_scraper(scraper_class, urls):
 
 
 async def main():
-
-
     gc = GoogleSheetClient()
     gc.open_spreadsheet('job-offers')
     worksheet = gc.spreadsheet.get_worksheet(0)
