@@ -71,15 +71,6 @@ class BaseScraper(ABC):
         """
         ...
 
-    @abstractmethod
-    async def max_page(self):
-        """
-        Get the maximum number of pages available in search results.
-
-        Raises:
-            NotImplementedError: Must be implemented in subclass.
-        """
-        ...
 
     async def go_to_page(self, url):
         """
