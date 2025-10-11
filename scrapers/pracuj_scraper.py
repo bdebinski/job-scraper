@@ -2,6 +2,7 @@ import asyncio
 from typing import Optional, Dict
 
 from playwright.async_api import Locator
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from .base_scraper import BaseScraper
 
@@ -16,10 +17,9 @@ class PracujScraper(BaseScraper):
     search_button = "[data-test=\"search-button\"]"
     cookie_locator = "[data-test=\"button-submitCookie\"]"
     section_offers_locator = "[data-test=\"section-offers\"]"
-    offers_locator = "[data-test=\"link-offer\"]"
     next_page_button = "[data-test=\"top-pagination-next-button\"]"
     max_page_locator = "[data-test=\"top-pagination-max-page-number\"]"
-    employer_name = "[data-test=\"text-employerName\"]"
+    offer_employer_name = "[data-test=\"text-employerName\"]"
     offer_requirements = "[data-test=\"section-requirements\"]"
     offer_salary = "[data-test=\"text-earningAmount\"]"
     offer_position_name = "[data-test=\"text-positionName\"]"
@@ -41,7 +41,12 @@ class PracujScraper(BaseScraper):
 
     async def accept_cookies(self) -> None:
         """Accept cookie consent on the website."""
-        await self.click_locator(self.cookie_locator)
+        try:
+            await self.click_locator(self.cookie_locator)
+        except PlaywrightTimeoutError:
+            # TODO: add logger here
+            print("Cookie locator not found")
+
 
     async def jobs_list(self) -> list:
         """
@@ -93,7 +98,7 @@ class PracujScraper(BaseScraper):
 
     async def get_employer_name(self, page) -> str:
         """Return the employer's name of the current job offer."""
-        return await page.locator(self.employer_name).inner_text()
+        return await page.locator(self.offer_employer_name).inner_text()
 
     async def get_url(self, page) -> str:
         """Return the URL of the current job offer."""
@@ -107,14 +112,22 @@ class PracujScraper(BaseScraper):
             int: Maximum page number. Defaults to 1 if not found.
         """
         try:
-            max_page = await self.page.locator(self.max_page_locator).inner_text(timeout=1000)
-        except:
+            max_page = int(await self.page.locator(self.max_page_locator).inner_text(timeout=1000))
+        except (PlaywrightTimeoutError, ValueError):
             max_page = 1
-        return max_page
+        return int(max_page)
 
     async def next_page(self) -> None:
-        """Click the button to go to the next page of job listings."""
-        await self.page.locator(self.next_page_button).click()
+        """
+        Click the button to go to the next page of job listings.
+
+        Raises:
+            PlaywrightTimeoutError: if the button is not clickable or not found
+        """
+        try:
+            await self.page.locator(self.next_page_button).click()
+        except PlaywrightTimeoutError as e:
+            raise PlaywrightTimeoutError(f"Next page button not found or not clickable: {e}")
 
     async def sort_offers_from_newest(self):
         await self.page.wait_for_timeout(500)
