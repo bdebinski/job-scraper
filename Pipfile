@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 playwright = "*"
 requests = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
 
 [dev-packages]
 pytest = "*"
