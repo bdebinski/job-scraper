@@ -11,7 +11,7 @@ class BaseScraper(ABC):
     and pagination.
     """
 
-    def __init__(self, page, browser):
+    def __init__(self, page, browser, sem=5):
         """
         Initialize the scraper with a Playwright page instance.
 
@@ -21,7 +21,7 @@ class BaseScraper(ABC):
         self.page = page
         self.browser = browser
         self.all_jobs = []
-        self.sem = asyncio.Semaphore(5)
+        self.sem = sem
 
     @abstractmethod
     async def search(self, keywords, location):
