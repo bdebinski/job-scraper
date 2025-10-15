@@ -1,9 +1,16 @@
+import os
+
 import gspread
 from gspread import Worksheet, WorksheetNotFound, SpreadsheetNotFound
 
 class GoogleSheetClient:
-    def __init__(self):
-        self.gc = gspread.service_account('job-scraper-470320-69bdf1515c05.json')
+    def __init__(self, credentials_path=None):
+        creds_path = credentials_path or os.getenv("GOOGLE_CREDENTIALS_PATH", 'credentials.json')
+
+        if not os.path.exists(creds_path):
+            raise FileNotFoundError(f"Credentials file not found: {creds_path}. "
+                                    "Set GOOGLE_CREDENTIALS_PATH env variable")
+        self.gc = gspread.service_account(creds_path)
         self.spreadsheet = None
 
     def open_spreadsheet(self, sheet_name) -> None:
