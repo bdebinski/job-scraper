@@ -8,6 +8,7 @@ pipeline {
                 sh 'pip install pipenv'
                 sh 'pipenv install --dev'
                 sh 'pipenv install exceptiongroup'
+                sh 'pipenv run playwright install chromium'
             }
         }
 
