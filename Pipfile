@@ -8,6 +8,9 @@ playwright = "*"
 requests = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
+gspread = "*"
+loguru = "*"
+python-dotenv = "*"
 
 [dev-packages]
 pytest = "*"

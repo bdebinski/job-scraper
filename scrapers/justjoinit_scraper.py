@@ -1,6 +1,7 @@
 import asyncio
 from typing import Optional, Dict
 
+from loguru import logger
 from playwright.async_api import Locator
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from .base_scraper import BaseScraper
@@ -53,6 +54,7 @@ class JustJoinItScraper(BaseScraper):
             keywords (str): The search keywords.
             location (str): The location for job search (currently unused in method).
         """
+        keywords, location = self._validate_scraper_params(keywords, location)
         await self.search_input.click()
         await self.page.wait_for_timeout(100)
         await self.search_input.type('a ' + keywords)
@@ -128,7 +130,7 @@ class JustJoinItScraper(BaseScraper):
         scroll_count = 0
         latest_jobs = await self.jobs_list()
         urls = []
-        while scroll_count < 300:
+        while scroll_count < MAX_SCROLL_ATTEMPTS:
             await self.page.evaluate("window.scrollBy(0, 400)")
             await self.page.wait_for_timeout(300)
             jobs = await self.jobs_list()
@@ -140,6 +142,7 @@ class JustJoinItScraper(BaseScraper):
             scroll_count += 1
         urls = set(urls)
         urls = urls.difference(set(offer_links_from_sheet))
+        logger.info(f"Urls to scrape {urls}")
         tasks = [self.scrape_single_offer(url) for url in urls]
         results = await asyncio.gather(*tasks)
         for job_data in results:

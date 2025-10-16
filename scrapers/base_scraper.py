@@ -160,11 +160,12 @@ class BaseScraper(ABC):
                     "url": url
                 }
                 logger.info(f"Scraping: {job_data}")
+                return job_data
             except Exception as e:
                 logger.error(f"Failed to scrape {url}: {e}")
+                return None
             finally:
                 await offer_page.close()
-            return job_data
 
     def _validate_scraper_params(self, keywords, location) -> tuple[str, str]:
         """Checks if keywords and location are not empty or whitespaces inputs."""

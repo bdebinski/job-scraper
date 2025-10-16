@@ -7,9 +7,9 @@ from playwright.async_api import async_playwright
 
 async def run_scraper(scraper_class, urls, config, sem=None):
     async with async_playwright() as p:
-        browser = await p.chromium.launch()
+        browser = await p.chromium.launch(headless=False)
         page = await browser.new_page()
-        scraper = scraper_class(page, browser, sem or asyncio.Semaphore(5))
+        scraper = scraper_class(page, browser, config.max_open_pages)
         await scraper.navigate()
         await scraper.accept_cookies()
         await scraper.search(config.search_keywords, "Łódź")
