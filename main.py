@@ -1,18 +1,18 @@
 from google_sheets_client import GoogleSheetClient
+from scrapers.config import ScraperConfig
 from scrapers.justjoinit_scraper import JustJoinItScraper
 from scrapers.pracuj_scraper import PracujScraper
-
 import asyncio
 from playwright.async_api import async_playwright
 
-async def run_scraper(scraper_class, urls):
+async def run_scraper(scraper_class, urls, config, sem=None):
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
-        scraper = scraper_class(page, browser)
+        scraper = scraper_class(page, browser, sem or asyncio.Semaphore(5))
         await scraper.navigate()
         await scraper.accept_cookies()
-        await scraper.search("test python", "Łódź")
+        await scraper.search(config.search_keywords, "Łódź")
         await scraper.sort_offers_from_newest()
         await scraper.extract_job_data(urls)
         await browser.close()
@@ -20,15 +20,16 @@ async def run_scraper(scraper_class, urls):
 
 
 async def main():
-    gc = GoogleSheetClient()
-    gc.open_spreadsheet('job-offers')
+    config = ScraperConfig.from_env()
+    gc = GoogleSheetClient(config.credentials_path)
+    gc.open_spreadsheet(config.spreadsheet_name)
     worksheet = gc.spreadsheet.get_worksheet(0)
     pracuj_urls = worksheet.col_values(5)
     worksheet = gc.spreadsheet.get_worksheet(1)
     justjoinit_urls = worksheet.col_values(5)
     tasks = [
-        run_scraper(PracujScraper, pracuj_urls),
-        run_scraper(JustJoinItScraper, justjoinit_urls)
+        run_scraper(PracujScraper, pracuj_urls, config),
+        run_scraper(JustJoinItScraper, justjoinit_urls, config)
     ]
     jobs = await asyncio.gather(*tasks)
 
