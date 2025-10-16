@@ -1,5 +1,8 @@
 import asyncio
 from abc import ABC, abstractmethod
+from typing import Optional, Dict
+
+from loguru import logger
 
 
 class BaseScraper(ABC):
@@ -10,8 +13,8 @@ class BaseScraper(ABC):
     for scraper subclasses that implement job search, listing retrieval,
     and pagination.
     """
-
-    def __init__(self, page, browser, sem=5):
+    cookie_locator: str = None
+    def __init__(self, page, browser, semaphore_value=5) -> None:
         """
         Initialize the scraper with a Playwright page instance.
 
@@ -21,10 +24,10 @@ class BaseScraper(ABC):
         self.page = page
         self.browser = browser
         self.all_jobs = []
-        self.sem = sem
+        self.sem = asyncio.Semaphore(semaphore_value)
 
     @abstractmethod
-    async def search(self, keywords, location):
+    async def search(self, keywords, location) -> None:
         """
         Perform a job search on the website.
 
@@ -38,7 +41,7 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    async def jobs_list(self):
+    async def jobs_list(self) -> list[str]:
         """
         Retrieve a list of job elements from the search results.
 
@@ -108,5 +111,65 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    async def scrape_single_offer(self, url):
+    async def get_employer_name(self, page) -> None:
         ...
+
+    @abstractmethod
+    async def get_position_name(self, page) -> None:
+        ...
+
+    @abstractmethod
+    async def get_earning_amount(self, page) -> None:
+        ...
+
+    @abstractmethod
+    async def get_job_requirement(self, page) -> None:
+        ...
+
+    async def scrape_single_offer(self, url: str) -> Optional[Dict]:
+        """
+               Scrapes data from a single job offer page.
+
+               The method opens a new browser page, accepts cookies, and extracts
+               relevant information about the job offer such as employer name,
+               position, salary, and requirements. After scraping, the page is closed
+               and the extracted data is returned as a dictionary.
+
+               Args:
+                   url (str): URL of the job offer page to scrape.
+
+               Returns:
+                   Optional[Dict]: A dictionary containing the scraped job data with the keys:
+                       - "employer" (str | None): Name of the employer.
+                       - "position" (str | None): Name of the job position.
+                       - "earning" (str | None): Salary or earning information.
+                       - "requirements" (List[str] | None): List of job requirements.
+                       - "url" (str): The original job offer URL.
+                     Returns None if scraping fails or no data is found.
+        """
+        async with self.sem:
+            offer_page = await self.browser.new_page()
+            try:
+                await offer_page.goto(url)
+                await offer_page.locator(self.cookie_locator).click()
+                job_data = {
+                    "employer": await self.get_employer_name(offer_page),
+                    "position": await self.get_position_name(offer_page),
+                    "earning": await self.get_earning_amount(offer_page),
+                    "requirements": await self.get_job_requirement(offer_page),
+                    "url": url
+                }
+                logger.info(f"Scraping: {job_data}")
+            except Exception as e:
+                logger.error(f"Failed to scrape {url}: {e}")
+            finally:
+                await offer_page.close()
+            return job_data
+
+    def _validate_scraper_params(self, keywords, location) -> tuple[str, str]:
+        """Checks if keywords and location are not empty or whitespaces inputs."""
+        if not keywords or not keywords.strip():
+            raise ValueError("Keywords can't be empty or whitespace")
+        if not location or not location.strip():
+            raise ValueError("Location can't be empty or whitespace")
+        return keywords, location

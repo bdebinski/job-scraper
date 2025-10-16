@@ -82,43 +82,6 @@ class JustJoinItScraper(BaseScraper):
 
         return urls
 
-    async def scrape_single_offer(self, url:str) -> Optional[Dict]:
-        """
-        Scrapes data from a single job offer page.
-
-        The method opens a new browser page, accepts cookies, and extracts
-        relevant information about the job offer such as employer name,
-        position, salary, and requirements. After scraping, the page is closed
-        and the extracted data is returned as a dictionary.
-
-        Args:
-            url (str): URL of the job offer page to scrape.
-
-        Returns:
-            Optional[Dict]: A dictionary containing the scraped job data with the keys:
-                - "employer" (str | None): Name of the employer.
-                - "position" (str | None): Name of the job position.
-                - "earning" (str | None): Salary or earning information.
-                - "requirements" (List[str] | None): List of job requirements.
-                - "url" (str): The original job offer URL.
-              Returns None if scraping fails or no data is found.
-        """
-        async with self.sem:
-            offer_page = await self.browser.new_page()
-            await offer_page.goto(url)
-            await offer_page.locator(self.cookie_locator).click()
-            job_data = {
-                "employer": await self.get_employer_name(offer_page),
-                "position": await self.get_position_name(offer_page),
-                "earning": await self.get_earning_amount(offer_page),
-                "requirements": await self.get_job_requirement(offer_page),
-                "url": url
-            }
-            # TODO: replace print with logger
-            print(job_data)
-            await offer_page.close()
-            return job_data
-
     async def get_position_name(self, page) -> str:
         """Return the position name of the current job offer."""
         return await page.locator('h1').inner_text()
@@ -161,17 +124,20 @@ class JustJoinItScraper(BaseScraper):
 
         Stores extracted jobs in the `all_jobs` attribute.
         """
+        MAX_SCROLL_ATTEMPTS = 300
+        scroll_count = 0
         latest_jobs = await self.jobs_list()
         urls = []
-        while True:
+        while scroll_count < 300:
             await self.page.evaluate("window.scrollBy(0, 400)")
-            await self.page.wait_for_timeout(100)
+            await self.page.wait_for_timeout(300)
             jobs = await self.jobs_list()
             if latest_jobs == jobs:
                 break
             else:
                 latest_jobs = jobs
                 urls.extend(jobs)
+            scroll_count += 1
         urls = set(urls)
         urls = urls.difference(set(offer_links_from_sheet))
         tasks = [self.scrape_single_offer(url) for url in urls]

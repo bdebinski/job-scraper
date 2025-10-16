@@ -3,6 +3,7 @@ from typing import Optional, Dict
 
 from playwright.async_api import Locator
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+from loguru import logger
 
 from .base_scraper import BaseScraper
 
@@ -36,28 +37,35 @@ class PracujScraper(BaseScraper):
             keywords (str): The search keywords.
             location (str): The location for job search (currently unused in method).
         """
-        await self.type_text(self.search_locator, keywords)
-        await self.click_locator(self.search_button)
+        keywords, location = self._validate_scraper_params(keywords, location)
+        try:
+            await self.type_text(self.search_locator, keywords)
+            await self.click_locator(self.search_button)
+        except PlaywrightTimeoutError as e:
+            raise PlaywrightTimeoutError(f"Search bar not found: {e}")
 
     async def accept_cookies(self) -> None:
         """Accept cookie consent on the website."""
         try:
             await self.click_locator(self.cookie_locator)
         except PlaywrightTimeoutError:
-            # TODO: add logger here
-            print("Cookie locator not found")
+            logger.error("Cookie locator not found")
 
 
-    async def jobs_list(self) -> list:
+    async def jobs_list(self) -> list[str]:
         """
         Retrieve a list of job offer elements from the current page.
 
         Returns:
             Locator: Playwright locator containing all job offer elements.
         """
-        locator = self.page.locator(self.section_offers_locator).locator('[data-test="link-offer"]')
-        await locator.first.wait_for(timeout=1000)
-        all_offers = await locator.all()
+        try:
+            locator = self.page.locator(self.section_offers_locator).locator('[data-test="link-offer"]')
+            await locator.first.wait_for(timeout=1000)
+            all_offers = await locator.all()
+        except PlaywrightTimeoutError:
+            logger.error("Jobs offers not found.")
+            all_offers = []
         urls = []
         for offer_locator in all_offers:
             href = await offer_locator.get_attribute("href")
@@ -66,39 +74,43 @@ class PracujScraper(BaseScraper):
 
         return urls
 
-    async def scrape_single_offer(self, url:str) -> Optional[Dict]:
-        offer_page = await self.browser.new_page()
-        await offer_page.goto(url)
-        await offer_page.locator(self.cookie_locator).click()
-        job_data = {
-            "employer": await self.get_employer_name(offer_page),
-            "position": await self.get_position_name(offer_page),
-            "earning": await self.get_earning_amount(offer_page),
-            "requirements": await self.get_job_requirement(offer_page),
-            "url": url
-        }
-        print(job_data)
-        await offer_page.close()
-        return job_data
-
-
     async def get_position_name(self, page) -> str:
         """Return the position name of the current job offer."""
-        return await page.locator(self.offer_position_name).inner_text()
+        try:
+            position = await page.locator(self.offer_position_name).inner_text()
+        except PlaywrightTimeoutError:
+            logger.warning("Position name not found.")
+            position = "Not found"
+        return position
 
     async def get_earning_amount(self, page) -> str:
         """Return the earning amount of the current job offer as a single string."""
-        elements = page.locator(self.offer_salary)
-        earning_amount =  await elements.all_inner_texts()
-        return "".join(earning_amount)
+        try:
+            elements = page.locator(self.offer_salary)
+            earning_amount =  await elements.all_inner_texts()
+            result = "".join(earning_amount)
+        except PlaywrightTimeoutError:
+            logger.info("Salary not found.")
+            result = "Not found"
+        return result
 
     async def get_job_requirement(self, page) -> str:
         """Return the job requirements of the current job offer."""
-        return await page.locator(self.offer_requirements).inner_text()
+        try:
+            requirements = await page.locator(self.offer_requirements).inner_text()
+        except PlaywrightTimeoutError:
+            logger.info("Requirements not found")
+            requirements = "Not found"
+        return requirements
 
     async def get_employer_name(self, page) -> str:
         """Return the employer's name of the current job offer."""
-        return await page.locator(self.offer_employer_name).inner_text()
+        try:
+            employer_name = await page.locator(self.offer_employer_name).inner_text()
+        except PlaywrightTimeoutError:
+            employer_name = "Not found"
+            logger.info("Employer name not found")
+        return employer_name
 
     async def get_url(self, page) -> str:
         """Return the URL of the current job offer."""
@@ -148,11 +160,11 @@ class PracujScraper(BaseScraper):
             should_continue_scraping = True
             for url in offer_urls:
                 if url in offer_links_from_sheet:
-                    print(f"URL already exists: {url}. Stopping further scraping on this page.")
+                    logger.info(f"URL already exists: {url}. Stopping further scraping on this page.")
                     should_continue_scraping = False
                     break
                 unique_offers_urls.append(url)
-            tasks = [self.scrape_single_offer(url) for url in offer_urls]
+            tasks = [self.scrape_single_offer(url) for url in unique_offers_urls]
             results = await asyncio.gather(*tasks)
             for job_data in results:
                 if job_data:
