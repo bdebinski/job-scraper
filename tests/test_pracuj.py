@@ -24,14 +24,18 @@ async def test_get_position_name_returns_correct_text(scraper_fixture):
     assert result == 'python developer'
 
 @pytest.mark.asyncio
-async def test_get_positon_name_raises_exception(scraper_fixture):
+async def test_get_positon_name_handles_exception(scraper_fixture):
     scraper = scraper_fixture
     fake_locator = AsyncMock(spec=['inner_text'])
     fake_locator.inner_text.side_effect = PlaywrightTimeoutError('Timeout')
+    fake_logger = MagicMock()
+    fake_logger.warning = MagicMock()
     scraper.page.locator.return_value = fake_locator
-    with pytest.raises(PlaywrightTimeoutError):
-        await scraper.get_position_name(scraper.page)
+    with patch("scrapers.pracuj_scraper.logger") as mock_logger:
+        result  = await scraper.get_position_name(scraper.page)
 
+    assert result == "Not found"
+    mock_logger.warning.assert_called_once_with("Position name not found.")
 
 @pytest.mark.asyncio
 async def test_get_url_returns_correct_trimmed_url(scraper_fixture):
@@ -56,14 +60,17 @@ async def test_get_employer_name_return_correct_text(scraper_fixture):
     assert result == "test_employee"
 
 @pytest.mark.asyncio
-async def test_get_employer_name_raises_timeout_error(scraper_fixture):
+async def test_get_employer_name_handles_exception(scraper_fixture):
     scraper = scraper_fixture
     fake_locator = AsyncMock()
     scraper.page.locator.return_value = fake_locator
     fake_locator.inner_text.side_effect = PlaywrightTimeoutError('Timeout')
 
-    with pytest.raises(PlaywrightTimeoutError):
-        await scraper.get_employer_name(scraper.page)
+    with patch("scrapers.pracuj_scraper.logger") as mock_logger:
+        result = await scraper.get_employer_name(scraper.page)
+
+    assert result == "Not found"
+    mock_logger.info.assert_called_once_with("Employer name not found")
 
 
 @pytest.mark.asyncio
@@ -243,15 +250,17 @@ async def test_get_employer_name_missing_element(tmp_path):
         scraper = PracujScraper(page, browser)
         scraper.offer_employer_name = "#employer"
 
-        with pytest.raises(PlaywrightTimeoutError):
-            await scraper.get_employer_name(page)
+        with patch('scrapers.pracuj_scraper.logger') as mock_logger:
+            result = await scraper.get_employer_name(page)
 
+        assert result == "Not found"
+        mock_logger.info.assert_called_once_with("Employer name not found")
         await browser.close()
 
 @pytest.mark.asyncio
 async def test_home_page_locators_are_available():
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch()
         page = await browser.new_page()
         scraper = PracujScraper(page, browser)
 
@@ -265,7 +274,7 @@ async def test_home_page_locators_are_available():
 async def test_search_results_locators_are_available():
     async with async_playwright() as p:
         # Arrange
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch()
         page = await browser.new_page()
         scraper = PracujScraper(page, browser)
 
@@ -283,7 +292,7 @@ async def test_search_results_locators_are_available():
 async def test_offer_locators_are_available():
     async with async_playwright() as p:
         # Arrange
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch()
         page = await browser.new_page()
         scraper = PracujScraper(page, browser)
 
