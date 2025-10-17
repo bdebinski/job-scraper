@@ -25,4 +25,3 @@ class ScraperConfig:
     def from_env(cls):
         """Create config from environment variables"""
         return cls()
-    # TODO: Create .env.example
