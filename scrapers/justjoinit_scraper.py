@@ -64,6 +64,7 @@ class JustJoinItScraper(BaseScraper):
         await self.get_location_dropdown(location).click()
         await self.search_button.click()
 
+    @handle_exceptions("Cookies")
     async def accept_cookies(self) -> None:
         """Accept cookie consent on the website."""
         await self.click_locator(self.cookie_locator)
