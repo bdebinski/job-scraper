@@ -55,16 +55,6 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    async def next_page(self):
-        """
-        Navigate to the next page of search results.
-
-        Raises:
-            NotImplementedError: Must be implemented in subclass.
-        """
-        ...
-
-    @abstractmethod
     async def accept_cookies(self):
         """
         Accept cookie consent on the website.
@@ -180,7 +170,7 @@ def handle_exceptions(field_name: str):
         async def wrapper(*arg, **kwargs):
             try:
                 result = await func(*arg, **kwargs)
-                logger.debug(f"{field_name} found: {result}")
+                logger.debug(f"{field_name} found{f": {result}" if result else ""}")
             except PlaywrightTimeoutError:
                 logger.warning(f"{field_name} name not found")
                 result = "Not found"
