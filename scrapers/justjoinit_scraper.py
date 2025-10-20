@@ -4,7 +4,8 @@ from typing import Optional, Dict
 from loguru import logger
 from playwright.async_api import Locator
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
-from .base_scraper import BaseScraper
+from .base_scraper import BaseScraper, handle_exceptions
+
 
 class JustJoinItScraper(BaseScraper):
     """
@@ -26,19 +27,20 @@ class JustJoinItScraper(BaseScraper):
 
     @property
     def search_input(self):
-        return self.page.get_by_role("button", name="Search: Job title, company,")
+        return self.page.get_by_role(role="button", name="Search: Job title, company,")
 
     @property
     def location_input(self):
-        return self.page.get_by_role("combobox", name="Location")
+        return self.page.get_by_role(role="combobox", name="Location")
 
     @property
     def search_button(self):
-        return self.page.get_by_role("button", name="Search", exact=True)
+        return self.page.get_by_role(role="button", name="Search", exact=True)
 
     @property
     def salary_locator(self):
         return self.page.locator('text=Salary').locator('..').locator('div.MuiTypography-h4')
+
     def get_location_dropdown(self, location):
         return self.page.get_by_role("option", name=location)
 
@@ -84,23 +86,23 @@ class JustJoinItScraper(BaseScraper):
 
         return urls
 
+    @handle_exceptions("Position")
     async def get_position_name(self, page) -> str:
         """Return the position name of the current job offer."""
         return await page.locator('h1').inner_text()
 
+    @handle_exceptions("Salary")
     async def get_earning_amount(self, page) -> str:
         """Return the earning amount of the current job offer as a single string."""
-        try:
-            salary_text =  await self.salary_locator.inner_text(timeout=5000)
-        except PlaywrightTimeoutError:
-            salary_text = "Not found"
-        return salary_text
+        return await self.salary_locator.inner_text(timeout=5000)
 
+    @handle_exceptions("Requirements")
     async def get_job_requirement(self, page) -> str:
         """Return the job requirements of the current job offer."""
         texts =  await page.locator('text=Tech stack').locator('..').locator('h4').all_inner_texts()
         return "\n".join(texts)
 
+    @handle_exceptions("Employer")
     async def get_employer_name(self, page) -> str:
         """Return the employer's name of the current job offer."""
         return await page.locator("p:has(svg)").nth(1).inner_text()

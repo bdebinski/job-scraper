@@ -1,7 +1,7 @@
 import asyncio
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
-
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from loguru import logger
 
 
@@ -174,3 +174,19 @@ class BaseScraper(ABC):
         if not location or not location.strip():
             raise ValueError("Location can't be empty or whitespace")
         return keywords, location
+
+def handle_exceptions(field_name: str):
+    def decorator(func):
+        async def wrapper(*arg, **kwargs):
+            try:
+                result = await func(*arg, **kwargs)
+                logger.info(f"{field_name} found: {result}")
+            except PlaywrightTimeoutError:
+                logger.warning(f"{field_name} name not found")
+                result = "Not found"
+            except Exception as e:
+                logger.error(f"Unexpected error getting {field_name} field:  {e}")
+                result = "Not found"
+            return result
+        return wrapper
+    return decorator
