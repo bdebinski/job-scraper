@@ -94,7 +94,7 @@ async def test_get_position_name_should_return_position_name_when_element_found(
         result = await scraper.get_position_name(fake_page)
 
     # Assert
-        mock_logger.info.assert_called_once_with(f"Position found: employer name")
+        mock_logger.debug.assert_called_once_with(f"Position found: employer name")
     assert result == "employer name"
     fake_page.locator.assert_called_once_with("h1")
     fake_locator.inner_text.assert_awaited_once()
@@ -130,7 +130,7 @@ async def test_get_earning_amount_should_return_salary_when_element_found(browse
         result = await scraper.get_earning_amount(fake_page)
 
     # Assert
-        mock_logger.info.assert_called_once_with(f"Salary found: 1000")
+        mock_logger.debug.assert_called_once_with(f"Salary found: 1000")
     assert result == "1000"
     mock_salary_locator.inner_text.assert_awaited_once()
 
@@ -166,7 +166,7 @@ async def test_get_employer_name_should_return_name_when_element_found(browser, 
         result = await scraper.get_employer_name(fake_page)
 
     # Assert
-        mock_logger.info.assert_called_once_with("Employer found: Employer name")
+        mock_logger.debug.assert_called_once_with("Employer found: Employer name")
     assert result == "Employer name"
     fake_page.locator.assert_called_once_with("p:has(svg)")
     fake_base_locator.nth.assert_called_once_with(1)
