@@ -5,7 +5,8 @@ from playwright.async_api import Locator
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from loguru import logger
 
-from .base_scraper import BaseScraper
+from .base_scraper import BaseScraper, handle_exceptions
+
 
 class PracujScraper(BaseScraper):
     """
@@ -44,12 +45,10 @@ class PracujScraper(BaseScraper):
         except PlaywrightTimeoutError as e:
             raise PlaywrightTimeoutError(f"Search bar not found: {e}")
 
+    @handle_exceptions("Cookie locator")
     async def accept_cookies(self) -> None:
         """Accept cookie consent on the website."""
-        try:
-            await self.click_locator(self.cookie_locator)
-        except PlaywrightTimeoutError:
-            logger.error("Cookie locator not found")
+        await self.click_locator(self.cookie_locator)
 
 
     async def jobs_list(self) -> list[str]:
@@ -74,43 +73,28 @@ class PracujScraper(BaseScraper):
 
         return urls
 
+    @handle_exceptions("Position")
     async def get_position_name(self, page) -> str:
         """Return the position name of the current job offer."""
-        try:
-            position = await page.locator(self.offer_position_name).inner_text()
-        except PlaywrightTimeoutError:
-            logger.warning("Position name not found.")
-            position = "Not found"
-        return position
+        return await page.locator(self.offer_position_name).inner_text()
 
+    @handle_exceptions("Salary")
     async def get_earning_amount(self, page) -> str:
         """Return the earning amount of the current job offer as a single string."""
-        try:
-            elements = page.locator(self.offer_salary)
-            earning_amount =  await elements.all_inner_texts()
-            result = "".join(earning_amount)
-        except PlaywrightTimeoutError:
-            logger.info("Salary not found.")
-            result = "Not found"
+        elements = page.locator(self.offer_salary)
+        earning_amount =  await elements.all_inner_texts()
+        result = "".join(earning_amount)
         return result
 
+    @handle_exceptions("Requirements")
     async def get_job_requirement(self, page) -> str:
         """Return the job requirements of the current job offer."""
-        try:
-            requirements = await page.locator(self.offer_requirements).inner_text()
-        except PlaywrightTimeoutError:
-            logger.info("Requirements not found")
-            requirements = "Not found"
-        return requirements
+        return await page.locator(self.offer_requirements).inner_text()
 
+    @handle_exceptions("Employer")
     async def get_employer_name(self, page) -> str:
         """Return the employer's name of the current job offer."""
-        try:
-            employer_name = await page.locator(self.offer_employer_name).inner_text()
-        except PlaywrightTimeoutError:
-            employer_name = "Not found"
-            logger.info("Employer name not found")
-        return employer_name
+        return await page.locator(self.offer_employer_name).inner_text()
 
     async def get_url(self, page) -> str:
         """Return the URL of the current job offer."""
@@ -129,6 +113,7 @@ class PracujScraper(BaseScraper):
             max_page = 1
         return int(max_page)
 
+    @handle_exceptions("Next page")
     async def next_page(self) -> None:
         """
         Click the button to go to the next page of job listings.
@@ -136,10 +121,9 @@ class PracujScraper(BaseScraper):
         Raises:
             PlaywrightTimeoutError: if the button is not clickable or not found
         """
-        try:
-            await self.page.locator(self.next_page_button).click()
-        except PlaywrightTimeoutError as e:
-            raise PlaywrightTimeoutError(f"Next page button not found or not clickable: {e}")
+        return await self.page.locator(self.next_page_button).click()
+
+
 
     async def sort_offers_from_newest(self):
         await self.page.wait_for_timeout(500)

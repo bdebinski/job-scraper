@@ -180,7 +180,7 @@ def handle_exceptions(field_name: str):
         async def wrapper(*arg, **kwargs):
             try:
                 result = await func(*arg, **kwargs)
-                logger.info(f"{field_name} found: {result}")
+                logger.debug(f"{field_name} found: {result}")
             except PlaywrightTimeoutError:
                 logger.warning(f"{field_name} name not found")
                 result = "Not found"
