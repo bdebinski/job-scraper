@@ -14,16 +14,6 @@ class JustJoinItScraper(BaseScraper):
     Handles navigation, job search, cookie acceptance, retrieving job listings,
     extracting job details, and pagination.
     """
-    search_locator = 'button[aria-label="Search: Job title, company,"]'
-    cookie_locator = "[id=\"cookiescript_accept\"]"
-    section_offers_locator = "[data-test=\"section-offers\"]"
-    offers_locator = "[data-test=\"link-offer\"]"
-    next_page_button = "[data-test=\"top-pagination-next-button\"]"
-    max_page_locator = "[data-test=\"top-pagination-max-page-number\"]"
-    employer_name = "[data-test=\"text-employerName\"]"
-    offer_requirements = "[data-test=\"section-requirements\"]"
-    offer_salary = "[data-test=\"text-earningAmount\"]"
-    offer_position_name = "[data-test=\"text-positionName\"]"
 
     @property
     def search_input(self):
@@ -111,10 +101,6 @@ class JustJoinItScraper(BaseScraper):
     async def get_url(self, page) -> str:
         """Return the URL of the current job offer."""
         return self.strip_url(page.url)
-
-    async def next_page(self) -> None:
-        """Click the button to go to the next page of job listings."""
-        await self.page.locator(self.next_page_button).click()
 
     async def sort_offers_from_newest(self):
         await self.page.wait_for_timeout(500)
