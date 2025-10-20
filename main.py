@@ -7,12 +7,12 @@ from playwright.async_api import async_playwright
 
 async def run_scraper(scraper_class, urls, config, sem=None):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch()
         page = await browser.new_page()
         scraper = scraper_class(page, browser, config.max_open_pages)
         await scraper.navigate()
         await scraper.accept_cookies()
-        await scraper.search(config.search_keywords, "Łódź")
+        await scraper.search(config.search_keywords, config.search_location)
         await scraper.sort_offers_from_newest()
         await scraper.extract_job_data(urls)
         await browser.close()
