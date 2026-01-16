@@ -6,6 +6,8 @@ from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from loguru import logger
 
 from .base_scraper import BaseScraper, handle_exceptions
+from .locators import PRACUJ_LOCATORS
+from .parsers import PracujOfferParser
 
 
 class PracujScraper(BaseScraper):
@@ -21,14 +23,14 @@ class PracujScraper(BaseScraper):
     section_offers_locator = "[data-test=\"section-offers\"]"
     next_page_button = "[data-test=\"top-pagination-next-button\"]"
     max_page_locator = "[data-test=\"top-pagination-max-page-number\"]"
-    offer_employer_name = "[data-test=\"text-employerName\"]"
-    offer_requirements = "[data-test=\"section-requirements\"]"
-    offer_salary = "[data-test=\"text-earningAmount\"]"
-    offer_position_name = "[data-test=\"text-positionName\"]"
+
 
     async def navigate(self) -> None:
         """Navigate to the main page of pracuj.pl."""
         await self.go_to_page("http://pracuj.pl")
+
+    def get_parser(self, page):
+        return PracujOfferParser(page, locators=PRACUJ_LOCATORS)
 
     async def search(self, keywords, location) -> None:
         """

@@ -116,6 +116,10 @@ class BaseScraper(ABC):
     async def get_job_requirement(self, page) -> None:
         ...
 
+    @abstractmethod
+    def get_parser(self, page) -> 'BaseOfferParser':
+        ...
+
     async def scrape_single_offer(self, url: str) -> Optional[Dict]:
         """
                Scrapes data from a single job offer page.
@@ -142,14 +146,9 @@ class BaseScraper(ABC):
             try:
                 await offer_page.goto(url)
                 await offer_page.locator(self.cookie_locator).click()
-                job_data = {
-                    "employer": await self.get_employer_name(offer_page),
-                    "position": await self.get_position_name(offer_page),
-                    "earning": await self.get_earning_amount(offer_page),
-                    "requirements": await self.get_job_requirement(offer_page),
-                    "url": url
-                }
-                logger.info(f"Scraping: {job_data}")
+                parser = self.get_parser(offer_page)
+                job_data = await parser.parse()
+                logger.info(f"Scraped: {job_data}")
                 return job_data
             except Exception as e:
                 logger.error(f"Failed to scrape {url}: {e}")
