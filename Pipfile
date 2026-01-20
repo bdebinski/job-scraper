@@ -11,6 +11,7 @@ pytest-cov = "*"
 gspread = "*"
 loguru = "*"
 python-dotenv = "*"
+playwright-stealth = "*"
 
 [dev-packages]
 pytest = "*"
