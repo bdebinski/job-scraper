@@ -1,8 +1,12 @@
 import asyncio
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
+
+import playwright.async_api
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from loguru import logger
+
+from scrapers.models import JobOffer
 
 
 class BaseScraper(ABC):
@@ -14,17 +18,25 @@ class BaseScraper(ABC):
     and pagination.
     """
     cookie_locator: str = None
-    def __init__(self, page, browser, semaphore_value=5) -> None:
+    def __init__(self, context, browser, semaphore_value=5) -> None:
         """
         Initialize the scraper with a Playwright page instance.
 
         Args:
             page: Playwright Page object used for web interactions.
         """
-        self.page = page
+        self.context = context
         self.browser = browser
+        self.page = None
+        self.url = None
+        self.nav_locators = None
         self.all_jobs = []
         self.sem = asyncio.Semaphore(semaphore_value)
+
+    async def navigate(self):
+        if not self.page:
+            self.page = await self.context.new_page()
+        await self.go_to_page(self.url)
 
     @abstractmethod
     async def search(self, keywords, location) -> None:
@@ -54,7 +66,6 @@ class BaseScraper(ABC):
     async def extract_job_data(self, offer_links_from_sheet: list):
         ...
 
-    @abstractmethod
     async def accept_cookies(self):
         """
         Accept cookie consent on the website.
@@ -62,7 +73,10 @@ class BaseScraper(ABC):
         Raises:
             NotImplementedError: Must be implemented in subclass.
         """
-        ...
+        try:
+            await self.click_locator(self.nav_locators.cookie_locator)
+        except playwright.async_api.TimeoutError:
+            logger.info("No cookie banner visible - assuming cookies already accepted.")
 
 
     async def go_to_page(self, url):
@@ -93,6 +107,10 @@ class BaseScraper(ABC):
         """
         await self.page.locator(locator).click()
 
+    async def get_url(self, page) -> str:
+        """Return the URL of the current job offer."""
+        return self.strip_url(page.url)
+
     @staticmethod
     def strip_url(url: str) -> str:
         return url.split("?", 1)[0]
@@ -101,26 +119,10 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    async def get_employer_name(self, page) -> None:
+    def get_parser(self, page):
         ...
 
-    @abstractmethod
-    async def get_position_name(self, page) -> None:
-        ...
-
-    @abstractmethod
-    async def get_earning_amount(self, page) -> None:
-        ...
-
-    @abstractmethod
-    async def get_job_requirement(self, page) -> None:
-        ...
-
-    @abstractmethod
-    def get_parser(self, page) -> 'BaseOfferParser':
-        ...
-
-    async def scrape_single_offer(self, url: str) -> Optional[Dict]:
+    async def scrape_single_offer(self, url: str) -> JobOffer|None:
         """
                Scrapes data from a single job offer page.
 
@@ -142,10 +144,9 @@ class BaseScraper(ABC):
                      Returns None if scraping fails or no data is found.
         """
         async with self.sem:
-            offer_page = await self.browser.new_page()
+            offer_page = await self.context.new_page()
             try:
                 await offer_page.goto(url)
-                await offer_page.locator(self.cookie_locator).click()
                 parser = self.get_parser(offer_page)
                 job_data = await parser.parse()
                 logger.info(f"Scraped: {job_data}")
@@ -156,7 +157,8 @@ class BaseScraper(ABC):
             finally:
                 await offer_page.close()
 
-    def _validate_scraper_params(self, keywords, location) -> tuple[str, str]:
+    @staticmethod
+    def _validate_scraper_params(keywords, location) -> tuple[str, str]:
         """Checks if keywords and location are not empty or whitespaces inputs."""
         if not keywords or not keywords.strip():
             raise ValueError("Keywords can't be empty or whitespace")
