@@ -17,3 +17,4 @@ pydantic = "*"
 [dev-packages]
 pytest = "*"
 pytest-asyncio = "*"
+pytest-playwright = "*"
