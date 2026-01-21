@@ -1,20 +1,21 @@
 pipeline {
     agent { label 'python-agent' }
 
+    environment {
+        PIPENV_SYSTEM = '1'
+        PIPENV_SKIP_LOCK = 'true'
+    }
+
     stages {
         stage('Install dependencies') {
             steps {
-                sh 'pip install --upgrade pip'
-                sh 'pip install pipenv'
                 sh 'pipenv install --dev'
-                sh 'pipenv install exceptiongroup'
-                sh 'pipenv run playwright install chromium'
             }
         }
 
         stage('Run tests') {
             steps {
-                sh 'pipenv run python -m pytest --junitxml=reports/results.xml tests/'
+                sh 'xvfb-run python -m pytest --junitxml=reports/results.xml tests/'
             }
             post {
                 always {
