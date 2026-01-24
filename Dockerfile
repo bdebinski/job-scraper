@@ -12,3 +12,9 @@ RUN apt-get update && \
 RUN pip install --upgrade pip pipenv
 
 WORKDIR /jenkins
+
+COPY Pipfile Pipfile.lock ./
+
+RUN pipenv install --system --deploy --dev
+
+COPY . .
