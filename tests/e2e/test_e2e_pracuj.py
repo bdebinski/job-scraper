@@ -46,7 +46,7 @@ async def test_offer_locators_are_available(page_fixture, pracuj_scraper):
 
 
         #TODO: implement wait for reload
-        await pracuj_scraper.page.wait_for_timeout(200)
+        await pracuj_scraper.page.wait_for_timeout(4000)
         urls = await pracuj_scraper.jobs_list()
         assert len(urls) > 0, "No offers found"
 
