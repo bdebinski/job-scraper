@@ -73,10 +73,10 @@ class BaseScraper(ABC):
         Raises:
             NotImplementedError: Must be implemented in subclass.
         """
-        try:
-            await self.click_locator(self.nav_locators.cookie_locator)
-        except playwright.async_api.TimeoutError:
-            logger.info("No cookie banner visible - assuming cookies already accepted.")
+        # try:
+        await self.click_locator(self.nav_locators.cookie_locator)
+        # except playwright.async_api.TimeoutError:
+        #     logger.info("No cookie banner visible - assuming cookies already accepted.")
 
 
     async def go_to_page(self, url):
