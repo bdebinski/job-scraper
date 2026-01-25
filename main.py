@@ -9,7 +9,7 @@ from playwright.async_api import async_playwright
 
 async def run_scraper(scraper_class, urls, config, sem=None):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False,                                          args=[
+        browser = await p.chromium.launch(headless=True,                                          args=[
                                               "--disable-blink-features=AutomationControlled",
                                               "--no-sandbox",
                                               "--disable-infobars"
