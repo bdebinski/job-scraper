@@ -35,3 +35,11 @@ reports/
 # OS
 .DS_Store
 Thumbs.db
+
+__pycache__/
+venv/
+.env
+.idea/
+.vscode/
+*.log
+trace_*.zip

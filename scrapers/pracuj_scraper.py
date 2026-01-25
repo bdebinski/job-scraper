@@ -53,7 +53,7 @@ class PracujScraper(BaseScraper):
         """
         try:
             locator = self.page.locator(self.nav_locators.offers_list)
-            await locator.first.wait_for(timeout=1000)
+            await locator.first.wait_for(timeout=10000)
             all_offers = await locator.all()
         except PlaywrightTimeoutError:
             logger.error("Jobs offers not found.")
