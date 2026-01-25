@@ -28,11 +28,17 @@ async def run_scraper(scraper_class, urls, config, sem=None):
             **context_args
         )
         scraper = scraper_class(context, browser, 2)
+        print(f"go to {scraper_class}")
         await scraper.navigate()
+        print(f"accept cookies {scraper_class}")
         await scraper.accept_cookies()
+        print(f"search {scraper_class}")
         await scraper.search(config.search_keywords, config.search_location)
+        print(f"sort {scraper_class}")
         await scraper.sort_offers_from_newest()
+        print(f"extract {scraper_class}")
         found_jobs = await scraper.extract_job_data(urls)
+        print(f"close browser {scraper_class}")
         await browser.close()
         return found_jobs
 
