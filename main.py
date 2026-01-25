@@ -9,7 +9,7 @@ from playwright.async_api import async_playwright
 
 async def run_scraper(scraper_class, urls, config, sem=None):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(                                          args=[
+        browser = await p.chromium.launch(headless=False,                                          args=[
                                               "--disable-blink-features=AutomationControlled",
                                               "--no-sandbox",
                                               "--disable-infobars"
@@ -45,7 +45,7 @@ async def main():
     worksheet = gc.spreadsheet.get_worksheet(1)
     justjoinit_urls = worksheet.col_values(5)
     tasks = [
-        # run_scraper(PracujScraper, pracuj_urls, config),
+        run_scraper(PracujScraper, pracuj_urls, config),
         run_scraper(JustJoinItScraper, justjoinit_urls, config)
     ]
     jobs = await asyncio.gather(*tasks)

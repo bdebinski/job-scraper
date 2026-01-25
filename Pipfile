@@ -6,15 +6,12 @@ name = "pypi"
 [packages]
 playwright = "*"
 requests = "*"
-pytest-asyncio = "*"
 pytest-cov = "*"
 gspread = "*"
 loguru = "*"
 python-dotenv = "*"
 playwright-stealth = "*"
 pydantic = "*"
-
-[dev-packages]
 pytest = "*"
 pytest-asyncio = "*"
 pytest-playwright = "*"

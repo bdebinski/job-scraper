@@ -146,7 +146,7 @@ class BaseScraper(ABC):
         async with self.sem:
             offer_page = await self.context.new_page()
             try:
-                await offer_page.goto(url)
+                await offer_page.goto(url, wait_until="domcontentloaded", timeout=45000)
                 parser = self.get_parser(offer_page)
                 job_data = await parser.parse()
                 logger.info(f"Scraped: {job_data}")
