@@ -12,10 +12,9 @@ gspread = "*"
 loguru = "*"
 python-dotenv = "*"
 playwright-stealth = "*"
+pydantic = "*"
 
 [dev-packages]
 pytest = "*"
 pytest-asyncio = "*"
-
-[requires]
-python_version = "3.14"
+pytest-playwright = "*"

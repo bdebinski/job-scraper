@@ -45,11 +45,15 @@ async def test_offer_locators_are_available(page_fixture, pracuj_scraper):
         await pracuj_scraper.search('python', 'Warszawa')
 
 
-        #TODO: implement wait for reload
-        await pracuj_scraper.page.wait_for_timeout(200)
+        first_offer = page_fixture.locator(pracuj_scraper.nav_locators.offers_list).first
+        await expect(first_offer).to_be_visible(timeout=20000)
         urls = await pracuj_scraper.jobs_list()
-        assert len(urls) > 0, "No offers found"
 
+        if not urls:
+                await page_fixture.screenshot(path="reports/debug_no_offers.png")
+                html_content = await page_fixture.content()
+                with open("reports/debug_page.html", "w", encoding="utf-8") as f:
+                        f.write(html_content)
         await page_fixture.goto(urls[0])
 
         # Assert
