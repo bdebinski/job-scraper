@@ -9,6 +9,7 @@ from playwright.async_api import async_playwright
 
 async def run_scraper(scraper_class, urls, config, sem=None):
     async with async_playwright() as p:
+        print(f"Run scraper {scraper_class}")
         browser = await p.chromium.launch(headless=False,                                          args=[
                                               "--disable-blink-features=AutomationControlled",
                                               "--no-sandbox",
@@ -37,9 +38,11 @@ async def run_scraper(scraper_class, urls, config, sem=None):
 
 
 async def main():
+    print("Starting main")
     config = ScraperConfig.from_env()
     gc = GoogleSheetClient(config.credentials_path)
     gc.open_spreadsheet(config.spreadsheet_name)
+    print("GC client connected")
     worksheet = gc.spreadsheet.get_worksheet(0)
     pracuj_urls = worksheet.col_values(5)
     worksheet = gc.spreadsheet.get_worksheet(1)
@@ -48,8 +51,10 @@ async def main():
         run_scraper(PracujScraper, pracuj_urls, config),
         run_scraper(JustJoinItScraper, justjoinit_urls, config)
     ]
+    print("Run scrapers")
     jobs = await asyncio.gather(*tasks)
 
+    print("Add to google sheets")
     for i, job_list in enumerate(jobs):
         columns = ["employer", "position", "salary", "requirements", "url",
                    "status"]
