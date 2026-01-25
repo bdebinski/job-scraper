@@ -1,6 +1,8 @@
 pipeline {
     agent { label 'python-agent' }
-
+    triggers {
+        cron('H * * * *')
+    }
     environment {
         PIPENV_SYSTEM = '1'
         PIPENV_SKIP_LOCK = 'true'
@@ -13,13 +15,16 @@ pipeline {
             }
         }
 
-        stage('Run tests') {
+        stage('Run scraper') {
             steps {
-                sh 'xvfb-run python -m pytest --junitxml=reports/results.xml tests/'
+            withCredentials([file(credentialsId: 'google-sheets-secret', variable: 'SECRET_FILE')]) {
+                sh 'cp $SECRET_FILE credentials.json'
+                sh 'xvfb-run python main.py'
+                sh 'rm -f credentials.json'
+            }
             }
             post {
                 always {
-                    junit 'reports/results.xml'
                     archiveArtifacts artifacts: 'reports/*.png, reports/*.html', allowEmptyArchive: true
                 }
             }
