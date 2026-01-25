@@ -9,29 +9,20 @@ from playwright.async_api import async_playwright
 
 async def run_scraper(scraper_class, urls, config, sem=None):
     async with async_playwright() as p:
-        print(f"Run scraper {scraper_class}")
-        if scraper_class == PracujScraper:
-            browser = await p.chromium.launch(headless=False,                                          args=[
-                                                  "--disable-blink-features=AutomationControlled",
-                                                  "--no-sandbox",
-                                                  "--disable-infobars"
-                                              ])
-            context_args = {
-                "viewport": {"width": 1920, "height": 1080},
-                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-                "locale": "pl-PL"
-            }
-        else:
-            browser = await p.chromium.launch(headless=True, args=[
-                "--disable-blink-features=AutomationControlled",
-                "--no-sandbox",
-                "--disable-infobars"
-            ])
-            context_args = {
-                "viewport": {"width": 1920, "height": 1080},
-                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-                "locale": "pl-PL"
-            }
+
+        browser = await p.chromium.launch(headless=False,                                          args=[
+                                              "--disable-blink-features=AutomationControlled",
+                                              "--no-sandbox",
+                                              "--disable-infobars",
+                                              "--disable-gpu",
+                                              "--disable-dev-shm-usage",
+                                          ])
+        context_args = {
+            "viewport": {"width": 1920, "height": 1080},
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "locale": "pl-PL"
+        }
+
         # TODO: resolve captcha
         if os.path.exists("state.json") and scraper_class==PracujScraper:
             print("Loading cookies from 'state.json'")
