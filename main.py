@@ -26,7 +26,7 @@ async def run_scraper(scraper_class, urls, config, sem=None):
         context = await browser.new_context(
             **context_args
         )
-        scraper = scraper_class(context, browser, 5)
+        scraper = scraper_class(context, browser, 2)
         await scraper.navigate()
         await scraper.accept_cookies()
         await scraper.search(config.search_keywords, config.search_location)
