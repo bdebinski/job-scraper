@@ -51,7 +51,7 @@ class JustJoinItScraper(BaseScraper):
             list: list of urls in current website view
         """
         locator = self.page.locator(self.nav_locators.offers_list)
-        await locator.first.wait_for(timeout=5000)
+        await locator.first.wait_for(timeout=30000)
         all_offers = await locator.all()
         urls = []
         for offer_locator in all_offers:
