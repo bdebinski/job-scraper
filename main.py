@@ -60,7 +60,7 @@ async def main():
     justjoinit_urls = worksheet.col_values(5)
     tasks = [
         run_scraper(PracujScraper, pracuj_urls, config),
-        # run_scraper(JustJoinItScraper, justjoinit_urls, config)
+        run_scraper(JustJoinItScraper, justjoinit_urls, config)
     ]
     print("Run scrapers")
     jobs = await asyncio.gather(*tasks)
