@@ -22,7 +22,7 @@ jobs:
         run: python -c "import os; f = open('credentials.json', 'w'); f.write(os.environ['GOOGLE_SHEETS_JSON']); f.close()"
 
       - name: Run scraper
-        run: xvfb-run python main.py
+        run: xvfb-run python -u main.py
 
       - name: Upload Reports (Screenshots)
         if: always()
