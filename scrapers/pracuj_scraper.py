@@ -99,6 +99,7 @@ class PracujScraper(BaseScraper):
     async def sort_offers_from_newest(self):
         await self.page.wait_for_timeout(500)
         dropdown = self.page.locator(self.nav_locators.sort_button)
+        await self.page.wait_for_timeout(500)
         try:
             await dropdown.wait_for(state="visible", timeout=30000)
         except playwright.async_api.TimeoutError:
@@ -106,8 +107,10 @@ class PracujScraper(BaseScraper):
             await self.page.wait_for_load_state("domcontentloaded")
             await dropdown.wait_for(state="visible", timeout=30000)
             await dropdown.click()
+        await self.page.wait_for_timeout(500)
         option = self.page.locator(self.nav_locators.sort_option)
         await option.wait_for(state="visible", timeout=30000)
+        await self.page.wait_for_timeout(500)
         await option.click()
 
     async def extract_job_data(self, offer_links_from_sheet: list) -> list[Any]:
