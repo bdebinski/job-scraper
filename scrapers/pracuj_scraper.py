@@ -112,7 +112,7 @@ class PracujScraper(BaseScraper):
             await dropdown.click()
         await self.page.wait_for_timeout(500)
         await self.page.screenshot(path="reports/dropdown.png")
-        option = self.page.locator("[data-test=\"list-sort-type\"]").get_by_text("Najnowsze")
+        option = self.page.locator(self.nav_locators.sort_option)
         await option.wait_for(state="visible", timeout=30000)
         await self.page.wait_for_timeout(500)
         await option.click()

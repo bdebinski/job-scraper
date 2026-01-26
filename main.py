@@ -40,7 +40,7 @@ async def run_scraper(scraper_class, urls, config, sem=None):
         print(f"sort {scraper_class}")
         await scraper.sort_offers_from_newest()
         print(f"extract {scraper_class}")
-        # found_jobs = await scraper.extract_job_data(urls)
+        found_jobs = await scraper.extract_job_data(urls)
         # print(f"close browser {scraper_class}")
         # await browser.close()
         # return found_jobs
