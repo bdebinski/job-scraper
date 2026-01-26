@@ -98,10 +98,11 @@ class PracujScraper(BaseScraper):
     async def sort_offers_from_newest(self):
         await self.page.wait_for_timeout(500)
         dropdown = self.page.locator(self.nav_locators.sort_button)
-        await self.page.screenshot(path="reports/screenshot_sort.png")
-        await dropdown.click(force=True)
-        await self.page.screenshot(path="reports/screenshot_after_click_sort.png")
-        await self.page.locator(self.nav_locators.sort_option).click(force=True)
+        await dropdown.wait_for(state="visible", timeout=10000)
+        await dropdown.click()
+        option = self.page.locator(self.nav_locators.sort_option)
+        await option.wait_for(state="visible", timeout=10000)
+        await option.click()
 
     async def extract_job_data(self, offer_links_from_sheet: list) -> list[Any]:
         """
