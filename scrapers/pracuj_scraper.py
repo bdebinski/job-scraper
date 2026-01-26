@@ -101,13 +101,17 @@ class PracujScraper(BaseScraper):
         dropdown = self.page.locator(self.nav_locators.sort_button)
         await self.page.wait_for_timeout(500)
         try:
+            await self.page.screenshot("reports/before_sort.png")
             await dropdown.wait_for(state="visible", timeout=30000)
+            await dropdown.click()
+            await self.page.screenshot("reports/after_sort_click.png")
         except playwright.async_api.TimeoutError:
             await self.page.reload()
             await self.page.wait_for_load_state("domcontentloaded")
             await dropdown.wait_for(state="visible", timeout=30000)
             await dropdown.click()
         await self.page.wait_for_timeout(500)
+        await self.page.screenshot("reports/dropdown.png")
         option = self.page.locator(self.nav_locators.sort_option)
         await option.wait_for(state="visible", timeout=30000)
         await self.page.wait_for_timeout(500)
