@@ -74,7 +74,7 @@ class BaseScraper(ABC):
             NotImplementedError: Must be implemented in subclass.
         """
         # try:
-        await self.page.screenshot(path="screenshot.png")
+        await self.page.screenshot(path="reports/screenshot.png")
         await self.click_locator(self.nav_locators.cookie_locator)
         # except playwright.async_api.TimeoutError:
         #     logger.info("No cookie banner visible - assuming cookies already accepted.")
