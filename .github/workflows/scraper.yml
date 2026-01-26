@@ -19,7 +19,7 @@ jobs:
       - name: Create credentials file
         env:
           GOOGLE_SHEETS_JSON: ${{ secrets.GOOGLE_SHEETS_JSON}}
-        run: echo "$GOOGLE_SHEETS_JSON" > credentials.json
+        run: python -c "import os; f = open('credentials.json', 'w'); f.write(os.environ['GOOGLE_SHEETS_JSON']); f.close()"
 
       - name: Run scraper
         run: xvfb-run python main.py
