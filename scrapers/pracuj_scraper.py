@@ -1,6 +1,7 @@
 import asyncio
 from typing import Optional, Dict, Any, Coroutine
 
+import playwright.async_api
 from playwright.async_api import Locator
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from loguru import logger
@@ -98,8 +99,13 @@ class PracujScraper(BaseScraper):
     async def sort_offers_from_newest(self):
         await self.page.wait_for_timeout(500)
         dropdown = self.page.locator(self.nav_locators.sort_button)
-        await dropdown.wait_for(state="visible", timeout=30000)
-        await dropdown.click()
+        try:
+            await dropdown.wait_for(state="visible", timeout=30000)
+        except playwright.async_api.TimeoutError:
+            await self.page.reload()
+            await self.page.wait_for_load_state("domcontentloaded")
+            await dropdown.wait_for(state="visible", timeout=30000)
+            await dropdown.click()
         option = self.page.locator(self.nav_locators.sort_option)
         await option.wait_for(state="visible", timeout=30000)
         await option.click()
