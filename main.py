@@ -40,10 +40,10 @@ async def run_scraper(scraper_class, urls, config, sem=None):
         print(f"sort {scraper_class}")
         await scraper.sort_offers_from_newest()
         print(f"extract {scraper_class}")
-        found_jobs = await scraper.extract_job_data(urls)
-        print(f"close browser {scraper_class}")
-        await browser.close()
-        return found_jobs
+        # found_jobs = await scraper.extract_job_data(urls)
+        # print(f"close browser {scraper_class}")
+        # await browser.close()
+        # return found_jobs
 
 
 async def main():
@@ -74,6 +74,6 @@ async def main():
             rows.append(row)
 
         worksheet = gc.spreadsheet.get_worksheet(i)
-        worksheet.insert_rows(rows, 5)
+        worksheet.insert_rows(rows, 2)
 if __name__ == "__main__":
     asyncio.run(main())
