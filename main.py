@@ -32,7 +32,7 @@ async def run_scraper(scraper_class, urls, config, sem=None):
         context = await browser.new_context(
             **context_args
         )
-        scraper = scraper_class(context, browser, 1)
+        scraper = scraper_class(context, browser, 5)
         print(f"go to {scraper_class}")
         await scraper.navigate()
         print(f"accept cookies {scraper_class}")
