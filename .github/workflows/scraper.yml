@@ -1,0 +1,32 @@
+name: run-scraper-once-per-hour
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+jobs:
+  run_scraper:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright/python:v1.49.0-noble
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pip install pipenv
+          pipenv isntall --system --deploy
+
+      - name: Create credentials file
+        env:
+          GOOGLE_SHEETS_JSON: ${{ secrets.GOOGLE_SHEETS_JSON}}
+        run: echo "$GOOGLE_SHEETS_JSON" > credentials.json
+
+      - name: Run scraper
+        run: xvb-run python main.py
+
+      - name: Upload Reports (Screenshots)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-reports
+          path: reports/
