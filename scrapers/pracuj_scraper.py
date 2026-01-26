@@ -99,8 +99,8 @@ class PracujScraper(BaseScraper):
         await self.page.wait_for_timeout(500)
         dropdown = self.page.locator(self.nav_locators.sort_button)
         await self.page.screenshot(path="reports/screenshot_sort.png")
-        await dropdown.click()
-        await self.page.locator(self.nav_locators.sort_option).click()
+        await dropdown.click(force=True)
+        await self.page.locator(self.nav_locators.sort_option).click(force=True)
 
     async def extract_job_data(self, offer_links_from_sheet: list) -> list[Any]:
         """
