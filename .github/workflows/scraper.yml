@@ -14,7 +14,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pipenv
-          pipenv isntall --system --deploy
+          pipenv install --system --deploy
 
       - name: Create credentials file
         env:
@@ -22,7 +22,7 @@ jobs:
         run: echo "$GOOGLE_SHEETS_JSON" > credentials.json
 
       - name: Run scraper
-        run: xvb-run python main.py
+        run: xvfb-run python main.py
 
       - name: Upload Reports (Screenshots)
         if: always()
