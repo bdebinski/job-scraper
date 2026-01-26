@@ -74,6 +74,6 @@ async def main():
             rows.append(row)
 
         worksheet = gc.spreadsheet.get_worksheet(i)
-        worksheet.insert_rows(rows, 2)
+        worksheet.insert_rows(rows, 5)
 if __name__ == "__main__":
     asyncio.run(main())
