@@ -1,7 +1,10 @@
 import asyncio
-from typing import Any, Coroutine
 
+import httpx
 from loguru import logger
+
+from scrapers.models import JobOffer
+from scrapers.utills.data_parsers import clean_job_description, extract_salary_pln
 from .base_scraper import BaseScraper, handle_exceptions
 from .config import ScraperConfig
 from .locators import JJIT_OFFER, JJIT_NAV
@@ -27,7 +30,7 @@ class JustJoinItScraper(BaseScraper):
     def get_location_dropdown(self, location):
         return self.page.get_by_role("option", name=location)
 
-    async def search(self, keywords, location) -> None:
+    async def search(self, keywords: str, location: str="all-locations") -> None:
         """
         Enter keywords and execute job search.
 
@@ -35,13 +38,14 @@ class JustJoinItScraper(BaseScraper):
             keywords (str): The search keywords.
             location (str): The location for job search (currently unused in method).
         """
-        keywords, location = self._validate_scraper_params(keywords, location)
-        await self.page.locator(self.nav_locators.search_input).click()
-        await self.page.wait_for_timeout(100)
-        await self.page.locator(self.nav_locators.search_input).type('a ' + keywords)
-        await self.page.locator(self.nav_locators.location_input).type(location)
-        await self.get_location_dropdown(location).click()
-        await self.page.locator(self.nav_locators.search_button).click()
+        formattted_keyword = keywords.replace(" ", "%20")
+        search_url = f"https://justjoin.it/job-offers/{location}/python?keyword={formattted_keyword}&orderBy=DESC&sortBy=newest"
+        try:
+            await self.page.goto(search_url, wait_until="domcontentloaded")
+            await self.page.wait_for_selector(self.nav_locators.offers_list, timeout=15000)
+            await asyncio.sleep(2)
+        except Exception as e:
+            logger.error(f"💥 Błąd podczas ładowania wyszukiwarki: {e}")
 
     async def jobs_list(self) -> list:
         """
@@ -68,37 +72,81 @@ class JustJoinItScraper(BaseScraper):
         await self.page.locator("[role='menuitem']", has_text='Latest').click()
         await self.page.wait_for_timeout(2000)
 
-    async def extract_job_data(self, offer_links_from_sheet: list) -> list[Any]:
-        """
-        Iterate through all pages and offers to extract job data.
+    async def extract_job_data(self, offer_links_from_sheet: list):
+        logger.info("🕵️ Zbieram najnowsze oferty z góry listy...")
+        
+        try:
+            offer_elements = await self.jobs_list()
+            urls = list(dict.fromkeys(offer_elements))
+            
+            new_urls = [u for u in urls if u not in offer_links_from_sheet]
+            logger.info(f"🚀 Znalazłem {len(urls)} ofert na stronie. Z tego NOWYCH: {len(new_urls)}")
 
-        Stores extracted jobs in the `all_jobs` attribute.
-        """
-        MAX_SCROLL_ATTEMPTS = ScraperConfig.scroll_step
-        scroll_count = 0
-        latest_jobs = await self.jobs_list()
-        new_jobs = []
-        urls = []
-        if set(latest_jobs).issubset(set(offer_links_from_sheet)):
-            logger.info(f"No new jobs to scrape.")
-        else:
-            while scroll_count < MAX_SCROLL_ATTEMPTS:
-                await self.page.evaluate("window.scrollBy(0, 400)")
-                await self.page.wait_for_timeout(300)
-                jobs = await self.jobs_list()
+            if not new_urls:
+                logger.info("💤 Brak nowych ofert. Kończę pracę.")
+                return []
 
-                if latest_jobs == jobs:
-                    break
-                else:
-                    latest_jobs = jobs
-                    urls.extend(jobs)
-                scroll_count += 1
-            urls = set(urls)
-            urls = urls.difference(set(offer_links_from_sheet))
-            logger.info(f"Urls to scrape {urls}")
-            tasks = [self.scrape_single_offer(url) for url in urls]
-            results = await asyncio.gather(*tasks)
-            for job_data in results:
+            new_jobs = []
+            for url in new_urls:
+                slug = url.split('/job-offer/')[-1].split('?')[0] # Wyciągamy czysty slug
+                logger.info(f"⬇️ Pobieram dane przez API dla: {slug}")
+                
+                # Pobieramy szczegóły przez szybkie API
+                job_data = await self.fetch_details_via_api(slug, url)
+                
                 if job_data:
                     new_jobs.append(job_data)
-        return new_jobs
+                    
+                # Oddech dla serwerów JustJoinIT
+                await asyncio.sleep(1) 
+                
+            return new_jobs
+
+        except Exception as e:
+            logger.error(f"💥 Błąd podczas wyciągania danych: {e}")
+            return []
+        
+        
+    async def fetch_details_via_api(self, slug: str, full_url: str):
+        """KROK 4: Strzał do API po pełny opis (bez Playwrighta)"""
+        api_url = f"https://justjoin.it/api/candidate-api/offers/{slug}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Referer": full_url,
+            "Accept": "application/json"
+        }
+        
+        async with httpx.AsyncClient(timeout=10) as client:
+            try:
+                resp = await client.get(api_url, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    # 1. Wyciąganie skilli
+                    skills = ", ".join([s.get('name', '') for s in data.get('requiredSkills', [])])
+                    
+                    # 2. Wyciąganie widełek płacowych
+                    salary = extract_salary_pln(data.get('employmentTypes', []))
+
+                    # 3. Wyciąganie opisu (kluczowe dla Gemini)
+                    description = clean_job_description(data.get('description') or data.get('body')) or "Brak opisu"
+
+                    # Zwracamy słownik (dopasuj klucze do swojego arkusza)
+        
+                    job_data = {
+                        "employer": data.get('companyName'),
+                        "position": data.get('title'),
+                        "salary": salary,
+                        "requirements": skills,
+                        "url": full_url,
+                        "description": description,
+                        "status": "TO_ANALYZE"
+                    }
+            
+                    # 2. TUTAJ ZMIANA: Zwracamy model, a nie słownik
+                    return JobOffer(**job_data)
+                else:
+                    logger.warning(f"⚠️ API zwróciło status {resp.status_code} dla {slug}")
+            except Exception as e:
+                logger.error(f"❌ Błąd połączenia z API dla {slug}: {e}")
+                
+        return None
