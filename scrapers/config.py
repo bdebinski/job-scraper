@@ -10,7 +10,7 @@ class ScraperConfig:
     spreadsheet_name: str = os.getenv("SPREADSHEET_NAME", "job-offers")
 
     # Search params
-    search_keywords: str = os.getenv("SEARCH_KEYWORDS", 'python test')
+    search_keywords: str = os.getenv("SEARCH_KEYWORDS", 'Test Automation Engineer')
     search_location: str = os.getenv("SEARCH_LOCATION", "Łódź")
 
     # Scraping
