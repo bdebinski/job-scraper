@@ -77,7 +77,8 @@ class BaseScraper(ABC):
             await self.click_locator(self.nav_locators.cookie_locator)
         except playwright.async_api.TimeoutError:
             logger.info("No cookie banner visible - assuming cookies already accepted.")
-
+        if type(self).__name__ == "PracujScraper":
+            await self.page.get_by_role("button", name="Zamknij").click()
 
     async def go_to_page(self, url):
         """
@@ -165,6 +166,20 @@ class BaseScraper(ABC):
         if not location or not location.strip():
             raise ValueError("Location can't be empty or whitespace")
         return keywords, location
+    
+    async def setup_network_interception(self):
+        excluded_resources = ["image", "media", "font", "imageset", "beacon", "ad"]
+
+        async def intercept(route):
+            if route.request.resource_type in excluded_resources:
+                # logger.debug(f"🛑 Zablokowano: {route.request.resource_type} - {route.request.url[:50]}...")
+                await route.abort()
+            else:
+                await route.continue_()
+
+        # Rejestrujemy przechwytywanie dla wszystkich URL-i
+        await self.page.route("**/*", intercept)
+        logger.info(f"🛡️ Intercepcja sieci aktywna dla {self.__class__.__name__}")
 
 def handle_exceptions(field_name: str):
     def decorator(func):
@@ -181,3 +196,5 @@ def handle_exceptions(field_name: str):
             return result
         return wrapper
     return decorator
+
+

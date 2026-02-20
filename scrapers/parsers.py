@@ -1,6 +1,8 @@
 import playwright.async_api
 from playwright.async_api import Page
 
+from scrapers.utills.data_parsers import clean_job_description
+
 from .locators import OfferPageLocators
 from .models import JobOffer
 
@@ -15,8 +17,10 @@ class PracujOfferParser:
             employer=await self.page.locator(self.locators.employer).inner_text(),
             position=await self.page.locator(self.locators.position).inner_text(),
             salary=await self._get_salary(),
-            requirements=await self.page.locator(self.locators.requirements).inner_text(),
-            url=self.page.url
+            requirements=clean_job_description(*await self.page.locator("[data-test=\"section-technologies\"]").all_inner_texts()),
+            description=clean_job_description(await self.page.locator(self.locators.requirements).inner_text()),
+            url=self.page.url,
+            status="TO_ANALYZE"
         )
 
     async def _get_salary(self):
