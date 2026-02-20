@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional
 
 class JobOffer(BaseModel):
@@ -7,3 +7,5 @@ class JobOffer(BaseModel):
     salary: str
     requirements: str
     url: str
+    description: str
+    status: str
