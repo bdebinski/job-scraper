@@ -22,7 +22,8 @@ async def run_scraper(scraper_class, urls, config):
         context = await browser.new_context(
             viewport={"width": 1280, "height": 720},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            locale="pl-PL"
+            locale="pl-PL",
+            java_script_enabled=False,
         )
         await context.tracing.start(screenshots=True, snapshots=True, sources=True)
         
@@ -40,7 +41,7 @@ async def run_scraper(scraper_class, urls, config):
         
         try:
             await scraper.search(config.search_keywords)
-            await scraper.accept_cookies()
+            # await scraper.accept_cookies()
             found_jobs = await scraper.extract_job_data(urls)
             return found_jobs
         except Exception as e:
@@ -71,7 +72,7 @@ async def main():
     worksheet = gc.spreadsheet.get_worksheet(1)
     justjoinit_urls = worksheet.col_values(6)
     tasks = [
-        # run_scraper(PracujScraper, pracuj_urls, config),
+        run_scraper(PracujScraper, pracuj_urls, config),
         run_scraper(JustJoinItScraper, justjoinit_urls, config)
     ]
     jobs = await asyncio.gather(*tasks)

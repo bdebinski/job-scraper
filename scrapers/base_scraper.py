@@ -168,7 +168,7 @@ class BaseScraper(ABC):
         return keywords, location
     
     async def setup_network_interception(self):
-        excluded_resources = ["image", "media", "font", "imageset", "beacon", "ad"]
+        excluded_resources = ["image", "media", "font", "imageset", "beacon", "ad", "stylesheet"]
 
         async def intercept(route):
             if route.request.resource_type in excluded_resources:

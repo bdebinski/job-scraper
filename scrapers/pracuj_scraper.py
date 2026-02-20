@@ -25,7 +25,7 @@ class PracujScraper(BaseScraper):
         search_url = f"https://it.pracuj.pl/praca/{formattted_keyword};kw?sc=0&itth=37"
         try:
             await self.page.goto(search_url, wait_until="domcontentloaded")
-            await self.page.wait_for_selector(self.nav_locators.offers_list, timeout=15000)
+            # await self.page.wait_for_selector(self.nav_locators.offers_list, timeout=15000)
             await asyncio.sleep(2)
         except Exception as e:
             logger.error(f"💥 Błąd podczas ładowania wyszukiwarki: {e}")
@@ -38,7 +38,7 @@ class PracujScraper(BaseScraper):
             await asyncio.sleep(random.uniform(0.8, 1.5))
             
             locator = self.page.locator(self.nav_locators.offers_list)
-            await locator.first.wait_for(timeout=10000)
+            # await locator.first.wait_for(timeout=10000)
             all_offers = await locator.all()
         except PlaywrightTimeoutError:
             logger.error("Jobs offers not found.")
