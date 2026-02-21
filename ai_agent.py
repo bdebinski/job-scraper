@@ -2,22 +2,24 @@ import os
 import json
 from google import genai
 from loguru import logger
-from scrapers.models import JobOffer
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 class AIAgent:
     def __init__(self, cv_path: str):
         # Nowy, oficjalny klient SDK dla Google GenAI
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        
+
         if not os.path.exists(cv_path):
             raise FileNotFoundError(f"Nie znaleziono pliku CV: {cv_path}")
-            
+
         logger.info(f"Wgrywam plik CV do Google (Nowe API): {cv_path}")
         # Wgrywamy plik raz na starcie aplikacji
-        self.cv_file = self.client.files.upload(file=cv_path, config={'display_name': 'CV_Bartek'})
+        self.cv_file = self.client.files.upload(
+            file=cv_path, config={"display_name": "CV_Bartek"}
+        )
         logger.success("CV załadowane pomyślnie! Mózg operacji gotowy.")
 
     async def get_search_keywords(self) -> list:
@@ -32,13 +34,12 @@ class AIAgent:
         """
         # Używamy wywołań asynchronicznych (.aio) z nowego SDK i szybszego modelu 2.5
         response = await self.client.aio.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[self.cv_file, prompt]
+            model="gemini-2.5-flash", contents=[self.cv_file, prompt]
         )
-        
-        clean_json = response.text.replace('```json', '').replace('```', '').strip()
+
+        clean_json = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_json)["keywords"]
-    
+
     async def evaluate_jobs_batch(self, jobs: list) -> dict:
         """Ocenia paczkę ofert w jednym zapytaniu (oszczędność limitu RPD)."""
         if not jobs:
@@ -71,12 +72,11 @@ class AIAgent:
         try:
             # Używamy modelu flash dla szybkości i wyższych limitów darmowych
             response = await self.client.aio.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[self.cv_file, prompt]
+                model="gemini-2.5-flash", contents=[self.cv_file, prompt]
             )
-            
+
             # Oczyszczanie odpowiedzi z ewentualnych znaczników markdown
-            clean_text = response.text.replace('```json', '').replace('```', '').strip()
+            clean_text = response.text.replace("```json", "").replace("```", "").strip()
             return json.loads(clean_text)
         except Exception as e:
             logger.error(f"Błąd analizy batchowej AI: {e}")

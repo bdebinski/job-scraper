@@ -5,6 +5,7 @@ import pytest
 from google_sheets_client import GoogleSheetClient
 from main import main
 
+
 @pytest.mark.asyncio
 @patch("main.run_scraper")
 @patch("main.GoogleSheetClient")
@@ -26,9 +27,10 @@ async def test_main(scraper_config_mock, google_sheet_client_mock, mock_run_scra
 
     mock_google.open_spreadsheet.assert_called_once_with("job-offers")
 
+
 @patch("google_sheets_client.os.path.exists")
 def test_init_raises_error(mock_exists):
     mock_exists.return_value = False
     with pytest.raises(FileNotFoundError):
         GoogleSheetClient()
-    mock_exists.assert_called_once_with('credentials.json')
+    mock_exists.assert_called_once_with("credentials.json")

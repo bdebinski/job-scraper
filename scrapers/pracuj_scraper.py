@@ -9,6 +9,7 @@ from .base_scraper import BaseScraper
 from .locators import PRACUJ_OFFER, PRACUJ_NAV
 from .parsers import PracujOfferParser
 
+
 class PracujScraper(BaseScraper):
     def __init__(self, context, browser, semaphore_value=5):
         super().__init__(context, browser, semaphore_value)
@@ -20,7 +21,7 @@ class PracujScraper(BaseScraper):
 
     async def search(self, keywords: str) -> None:
         """Wyszukiwanie z ludzkim tempem pisania i obsługą błędów."""
-    
+
         formattted_keyword = keywords.replace(" ", "%20")
         search_url = f"https://it.pracuj.pl/praca/{formattted_keyword};kw?sc=0&itth=37"
         try:
@@ -36,14 +37,14 @@ class PracujScraper(BaseScraper):
             # Delikatny scroll, żeby Cloudflare widział ruch
             await self.page.evaluate("window.scrollBy(0, 400)")
             await asyncio.sleep(random.uniform(0.8, 1.5))
-            
+
             locator = self.page.locator(self.nav_locators.offers_list)
             # await locator.first.wait_for(timeout=10000)
             all_offers = await locator.all()
         except PlaywrightTimeoutError:
             logger.error("Jobs offers not found.")
             all_offers = []
-            
+
         urls = []
         for offer_locator in all_offers:
             href = await offer_locator.get_attribute("href")
@@ -91,10 +92,10 @@ class PracujScraper(BaseScraper):
         consecutive_duplicates = 0
         DUPLICATE_LIMIT = 10
         new_jobs = []
-        
+
         # Semafora ogranicza nas do 3 równoległych zadań
         # To chroni przed błędem 1015, ale jest 3x szybsze niż pętla for
-        sem = asyncio.Semaphore(3) 
+        sem = asyncio.Semaphore(3)
 
         async def throttled_scrape(url):
             async with sem:
@@ -106,11 +107,13 @@ class PracujScraper(BaseScraper):
                 return result
 
         max_page = await self.max_page()
-        
+
         for page_number in range(max_page):
-            logger.info(f"Strona {page_number + 1}/{max_page} | Zebrano: {len(new_jobs)}")
+            logger.info(
+                f"Strona {page_number + 1}/{max_page} | Zebrano: {len(new_jobs)}"
+            )
             offer_urls = await self.jobs_list()
-            
+
             unique_urls_to_scrape = []
             for url in offer_urls:
                 if url in offer_links_from_sheet:
@@ -119,7 +122,7 @@ class PracujScraper(BaseScraper):
                         logger.info("Limit duplikatów - kończę portal.")
                         return new_jobs
                     continue
-                
+
                 consecutive_duplicates = 0
                 unique_urls_to_scrape.append(url)
 
@@ -127,15 +130,16 @@ class PracujScraper(BaseScraper):
                 # Odpalamy paczkę zadań, ale Semafora dopilnuje, by tylko 3 szły naraz
                 tasks = [throttled_scrape(url) for url in unique_urls_to_scrape]
                 results = await asyncio.gather(*tasks)
-                
+
                 for res in results:
-                    if res: new_jobs.append(res)
+                    if res:
+                        new_jobs.append(res)
 
             if page_number + 1 >= max_page:
                 break
-                
+
             await self.next_page()
-            
+
         return new_jobs
 
     async def handle_pracuj_popups(self):
@@ -143,8 +147,8 @@ class PracujScraper(BaseScraper):
         try:
             close_btn = self.page.get_by_role("button", name="Zamknij").first
             await close_btn.wait_for(state="visible", timeout=10000)
-            
+
             await close_btn.click()
             logger.info("Zamknięto pop-up reklamowy.")
-        except:
-            pass
+        except PlaywrightTimeoutError:
+            logger.info("Nie znaleziono popupu")

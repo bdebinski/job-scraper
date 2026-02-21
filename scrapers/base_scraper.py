@@ -1,6 +1,5 @@
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Optional, Dict
 
 import playwright.async_api
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
@@ -17,7 +16,9 @@ class BaseScraper(ABC):
     for scraper subclasses that implement job search, listing retrieval,
     and pagination.
     """
+
     cookie_locator: str = None
+
     def __init__(self, context, browser, semaphore_value=5) -> None:
         """
         Initialize the scraper with a Playwright page instance.
@@ -63,8 +64,7 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    async def extract_job_data(self, offer_links_from_sheet: list):
-        ...
+    async def extract_job_data(self, offer_links_from_sheet: list): ...
 
     async def accept_cookies(self):
         """
@@ -116,33 +116,31 @@ class BaseScraper(ABC):
     def strip_url(url: str) -> str:
         return url.split("?", 1)[0]
 
-    async def sort_offers_from_newest(self):
-        ...
+    async def sort_offers_from_newest(self): ...
 
     @abstractmethod
-    def get_parser(self, page):
-        ...
+    def get_parser(self, page): ...
 
-    async def scrape_single_offer(self, url: str) -> JobOffer|None:
+    async def scrape_single_offer(self, url: str) -> JobOffer | None:
         """
-               Scrapes data from a single job offer page.
+        Scrapes data from a single job offer page.
 
-               The method opens a new browser page, accepts cookies, and extracts
-               relevant information about the job offer such as employer name,
-               position, salary, and requirements. After scraping, the page is closed
-               and the extracted data is returned as a dictionary.
+        The method opens a new browser page, accepts cookies, and extracts
+        relevant information about the job offer such as employer name,
+        position, salary, and requirements. After scraping, the page is closed
+        and the extracted data is returned as a dictionary.
 
-               Args:
-                   url (str): URL of the job offer page to scrape.
+        Args:
+            url (str): URL of the job offer page to scrape.
 
-               Returns:
-                   Optional[Dict]: A dictionary containing the scraped job data with the keys:
-                       - "employer" (str | None): Name of the employer.
-                       - "position" (str | None): Name of the job position.
-                       - "earning" (str | None): Salary or earning information.
-                       - "requirements" (List[str] | None): List of job requirements.
-                       - "url" (str): The original job offer URL.
-                     Returns None if scraping fails or no data is found.
+        Returns:
+            Optional[Dict]: A dictionary containing the scraped job data with the keys:
+                - "employer" (str | None): Name of the employer.
+                - "position" (str | None): Name of the job position.
+                - "earning" (str | None): Salary or earning information.
+                - "requirements" (List[str] | None): List of job requirements.
+                - "url" (str): The original job offer URL.
+              Returns None if scraping fails or no data is found.
         """
         async with self.sem:
             offer_page = await self.context.new_page()
@@ -166,9 +164,17 @@ class BaseScraper(ABC):
         if not location or not location.strip():
             raise ValueError("Location can't be empty or whitespace")
         return keywords, location
-    
+
     async def setup_network_interception(self):
-        excluded_resources = ["image", "media", "font", "imageset", "beacon", "ad", "stylesheet"]
+        excluded_resources = [
+            "image",
+            "media",
+            "font",
+            "imageset",
+            "beacon",
+            "ad",
+            "stylesheet",
+        ]
 
         async def intercept(route):
             if route.request.resource_type in excluded_resources:
@@ -181,12 +187,13 @@ class BaseScraper(ABC):
         await self.page.route("**/*", intercept)
         logger.info(f"🛡️ Intercepcja sieci aktywna dla {self.__class__.__name__}")
 
+
 def handle_exceptions(field_name: str):
     def decorator(func):
         async def wrapper(*arg, **kwargs):
             try:
                 result = await func(*arg, **kwargs)
-                logger.debug(f"{field_name} found{f": {result}" if result else ""}")
+                logger.debug(f"{field_name} found{f': {result}' if result else ''}")
             except PlaywrightTimeoutError:
                 logger.warning(f"{field_name} name not found")
                 result = "Not found"
@@ -194,7 +201,7 @@ def handle_exceptions(field_name: str):
                 logger.error(f"Unexpected error getting {field_name} field:  {e}")
                 result = "Not found"
             return result
+
         return wrapper
+
     return decorator
-
-
