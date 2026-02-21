@@ -4,7 +4,7 @@ import httpx
 from loguru import logger
 
 from scrapers.models import JobOffer
-from scrapers.utills.data_parsers import clean_job_description, extract_salary_pln
+from scrapers.utils.data_parsers import clean_job_description, extract_salary_pln
 from .base_scraper import BaseScraper
 from .locators import JJIT_OFFER, JJIT_NAV
 from .parsers import JustJoinItOfferParser
@@ -18,8 +18,8 @@ class JustJoinItScraper(BaseScraper):
     extracting job details, and pagination.
     """
 
-    def __init__(self, context, browser, semaphore_value=5):
-        super().__init__(context, browser, semaphore_value)
+    def __init__(self, page):
+        super().__init__(page, nav_locators=JJIT_NAV)
         self.url = "https://justjoin.it/"
         self.nav_locators = JJIT_NAV
 

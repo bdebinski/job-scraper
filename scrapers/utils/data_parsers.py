@@ -1,8 +1,12 @@
 import re
+from typing import Any
 from markdownify import markdownify as md
 
 
 def clean_job_description(html_content: str) -> str:
+    """
+    Removes html tags, new lines from text, then converts text to markdowns.
+    """
     if not html_content:
         return ""
 
@@ -13,17 +17,15 @@ def clean_job_description(html_content: str) -> str:
     return "\n".join(lines).strip()
 
 
-def extract_salary_pln(employment_types: list) -> str:
-    """Wyciąga pensję z priorytetem dla PLN."""
+def extract_salary_pln(employment_types: list[dict[str, Any]]) -> str:
+    """Extracts salary in PLN from JJIT fetch API."""
     if not employment_types:
-        return "Nie podano"
+        return "Not provided"
 
-    # Szukamy ofert w PLN
     pln_offer = next(
         (t for t in employment_types if t.get("currency", "").lower() == "pln"), None
     )
 
-    # Jeśli nie ma PLN, bierzemy pierwszą lepszą (np. EUR)
     selected = pln_offer if pln_offer else employment_types[0]
 
     low = selected.get("from")
@@ -35,4 +37,4 @@ def extract_salary_pln(employment_types: list) -> str:
     elif low:
         return f"{low}+ {curr}"
 
-    return "Nie podano"
+    return "Not provided"

@@ -8,62 +8,48 @@ from scrapers.justjoinit_scraper import JustJoinItScraper
 from scrapers.pracuj_scraper import PracujScraper
 
 
-async def run_scraper(scraper_class, urls, config):
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=False,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--use-fake-ui-for-media-stream",
-                "--window-position=0,0",
-            ],
-        )
+async def run_scraper(scraper_class, browser, urls, config):
 
-        context = await browser.new_context(
-            viewport={"width": 1280, "height": 720},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            locale="pl-PL",
-            java_script_enabled=False,
-        )
-        await context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    context = await browser.new_context(
+        viewport={"width": 1280, "height": 720},
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        locale="pl-PL",
+        java_script_enabled=False,
+    )
+    await context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
-        page = await context.new_page()
+    page = await context.new_page()
 
-        await page.add_init_script("""
+    await page.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {
                 get: () => undefined
             });
         """)
 
-        scraper = scraper_class(context, browser, 2)
-        scraper.page = page
-        await scraper.setup_network_interception()
+    scraper = scraper_class(page)
+    await scraper.setup_network_interception()
 
+    try:
+        await scraper.search(config.search_keywords)
+        found_jobs = await scraper.extract_job_data(urls)
+        return found_jobs
+    except Exception as e:
+        logger.error(f"💥 Błąd krytyczny w {scraper_class.__name__}: {e}")
+        return []
+    finally:
+        logger.info(f"💾 Próba zapisu Trace Viewera dla {scraper_class.__name__}...")
         try:
-            await scraper.search(config.search_keywords)
-            # await scraper.accept_cookies()
-            found_jobs = await scraper.extract_job_data(urls)
-            return found_jobs
-        except Exception as e:
-            logger.error(f"💥 Błąd krytyczny w {scraper_class.__name__}: {e}")
-            return []
-        finally:
-            logger.info(
-                f"💾 Próba zapisu Trace Viewera dla {scraper_class.__name__}..."
-            )
-            try:
-                await context.tracing.stop(path=f"trace_{scraper_class.__name__}.zip")
-                logger.success(f"✅ Trace zapisany: trace_{scraper_class.__name__}.zip")
-            except Exception as trace_err:
-                logger.error(f"❌ Nie udało się zapisać śladu: {trace_err}")
+            await context.tracing.stop(path=f"trace_{scraper_class.__name__}.zip")
+            logger.success(f"✅ Trace zapisany: trace_{scraper_class.__name__}.zip")
+        except Exception as trace_err:
+            logger.error(f"❌ Nie udało się zapisać śladu: {trace_err}")
 
-            await browser.close()
+        await context.close()
 
 
 async def main():
     config = ScraperConfig.from_env()
-    gc = GoogleSheetClient(config.credentials_path)
-    gc.open_spreadsheet(config.spreadsheet_name)
+    gc = GoogleSheetClient(config)
 
     # Inicjalizacja Agenta AI
     # agent = AIAgent("Bartosz_Debinski_Test_Automation_Engineer.pdf")
@@ -74,11 +60,20 @@ async def main():
     pracuj_urls = worksheet.col_values(6)
     worksheet = gc.spreadsheet.get_worksheet(1)
     justjoinit_urls = worksheet.col_values(6)
-    tasks = [
-        run_scraper(PracujScraper, pracuj_urls, config),
-        run_scraper(JustJoinItScraper, justjoinit_urls, config),
-    ]
-    jobs = await asyncio.gather(*tasks)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=False,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--use-fake-ui-for-media-stream",
+                "--window-position=0,0",
+            ],
+        )
+        tasks = [
+            run_scraper(PracujScraper, browser, pracuj_urls, config),
+            run_scraper(JustJoinItScraper, browser, justjoinit_urls, config),
+        ]
+        jobs = await asyncio.gather(*tasks)
     for i, job_list in enumerate(jobs):
         columns = [
             "employer",

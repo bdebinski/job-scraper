@@ -1,10 +1,12 @@
 import asyncio
 from abc import ABC, abstractmethod
+from typing import Any
 
 import playwright.async_api
-from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError
 from loguru import logger
 
+from scrapers.locators import NavigationLocators
 from scrapers.models import JobOffer
 
 
@@ -17,21 +19,21 @@ class BaseScraper(ABC):
     and pagination.
     """
 
-    cookie_locator: str = None
+    cookie_locator: str | None = None
 
-    def __init__(self, context, browser, semaphore_value=5) -> None:
+    def __init__(
+        self, page: Page, nav_locators: NavigationLocators, semaphore_value: int = 5
+    ) -> None:
         """
         Initialize the scraper with a Playwright page instance.
 
         Args:
             page: Playwright Page object used for web interactions.
         """
-        self.context = context
-        self.browser = browser
-        self.page = None
+        self.page = page
+        self.nav_locators = nav_locators
         self.url = None
-        self.nav_locators = None
-        self.all_jobs = []
+        self.all_jobs: list[str] = []
         self.sem = asyncio.Semaphore(semaphore_value)
 
     async def navigate(self):
@@ -40,7 +42,7 @@ class BaseScraper(ABC):
         await self.go_to_page(self.url)
 
     @abstractmethod
-    async def search(self, keywords, location) -> None:
+    async def search(self, keywords) -> None:
         """
         Perform a job search on the website.
 
@@ -119,7 +121,7 @@ class BaseScraper(ABC):
     async def sort_offers_from_newest(self): ...
 
     @abstractmethod
-    def get_parser(self, page): ...
+    def get_parser(self, page: Page) -> Any: ...
 
     async def scrape_single_offer(self, url: str) -> JobOffer | None:
         """
@@ -143,7 +145,7 @@ class BaseScraper(ABC):
               Returns None if scraping fails or no data is found.
         """
         async with self.sem:
-            offer_page = await self.context.new_page()
+            offer_page = await self.page.context.new_page()
             try:
                 await offer_page.goto(url)
                 parser = self.get_parser(offer_page)
@@ -184,7 +186,7 @@ class BaseScraper(ABC):
                 await route.continue_()
 
         # Rejestrujemy przechwytywanie dla wszystkich URL-i
-        await self.page.route("**/*", intercept)
+        await self.page.context.route("**/*", intercept)
         logger.info(f"🛡️ Intercepcja sieci aktywna dla {self.__class__.__name__}")
 
 

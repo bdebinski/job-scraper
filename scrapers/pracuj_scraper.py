@@ -5,16 +5,17 @@ from typing import Any
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from loguru import logger
 
+from scrapers.models import JobOffer
+
 from .base_scraper import BaseScraper
 from .locators import PRACUJ_OFFER, PRACUJ_NAV
 from .parsers import PracujOfferParser
 
 
 class PracujScraper(BaseScraper):
-    def __init__(self, context, browser, semaphore_value=5):
-        super().__init__(context, browser, semaphore_value)
+    def __init__(self, page):
+        super().__init__(page, nav_locators=PRACUJ_NAV)
         self.url = "https://pracuj.pl/"
-        self.nav_locators = PRACUJ_NAV
 
     def get_parser(self, page):
         return PracujOfferParser(page, locators=PRACUJ_OFFER)
@@ -53,10 +54,11 @@ class PracujScraper(BaseScraper):
         return urls
 
     async def max_page(self) -> int:
-        """PRZYWRÓCONE: Pobiera maksymalną liczbę stron."""
+        if not self.nav_locators.max_page:
+            logger.warning("No selector for max page, returns 1 as max page.")
+            return 1
         try:
             element = self.page.locator(self.nav_locators.max_page)
-            # Czekamy chwilę, aż element się pojawi
             await element.wait_for(timeout=5000)
             text = await element.inner_text()
             max_page = int(text)
@@ -67,8 +69,10 @@ class PracujScraper(BaseScraper):
 
     async def next_page(self) -> None:
         """Przejście do następnej strony z losową pauzą."""
+        if not self.nav_locators.next_page:
+            logger.warning("No selector for next_page in config.")
+            return
         await asyncio.sleep(random.uniform(2.0, 4.0))
-        # Scrollujemy na dół, bo tam zwykle jest paginacja
         await self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
         await asyncio.sleep(0.5)
         await self.page.locator(self.nav_locators.next_page).click()
@@ -91,7 +95,7 @@ class PracujScraper(BaseScraper):
         """Szybsze skrapowanie z użyciem semafory (3 oferty naraz)."""
         consecutive_duplicates = 0
         DUPLICATE_LIMIT = 10
-        new_jobs = []
+        new_jobs: list[JobOffer] = []
 
         # Semafora ogranicza nas do 3 równoległych zadań
         # To chroni przed błędem 1015, ale jest 3x szybsze niż pętla for

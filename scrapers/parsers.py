@@ -1,7 +1,7 @@
 import playwright.async_api
 from playwright.async_api import Page
 
-from scrapers.utills.data_parsers import clean_job_description
+from scrapers.utils.data_parsers import clean_job_description
 
 from .locators import OfferPageLocators
 from .models import JobOffer
@@ -51,6 +51,8 @@ class JustJoinItOfferParser:
             salary=await self._get_salary(),
             requirements=await self._get_requirements(),
             url=self.page.url,
+            description="",
+            status="TO_ANALYZE",
         )
 
     async def _get_requirements(self):

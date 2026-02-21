@@ -36,8 +36,8 @@ class AIAgent:
         response = await self.client.aio.models.generate_content(
             model="gemini-2.5-flash", contents=[self.cv_file, prompt]
         )
-
-        clean_json = response.text.replace("```json", "").replace("```", "").strip()
+        raw_text = response.text or ""
+        clean_json = raw_text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_json)["keywords"]
 
     async def evaluate_jobs_batch(self, jobs: list) -> dict:
@@ -76,7 +76,8 @@ class AIAgent:
             )
 
             # Oczyszczanie odpowiedzi z ewentualnych znaczników markdown
-            clean_text = response.text.replace("```json", "").replace("```", "").strip()
+            raw_text = response.text or ""
+            clean_text = raw_text.replace("```json", "").replace("```", "").strip()
             return json.loads(clean_text)
         except Exception as e:
             logger.error(f"Błąd analizy batchowej AI: {e}")
