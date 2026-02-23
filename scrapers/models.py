@@ -11,6 +11,5 @@ class JobOffer(BaseModel):
     description: str
     status: str
 
-
 class JobOfferRecord(JobOffer):
     row_index: int

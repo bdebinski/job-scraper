@@ -32,7 +32,6 @@ class AIAgent:
         
         Zwróć TYLKO czysty JSON: {"keywords": ["fraza1", "fraza2", "fraza3"]}
         """
-        # Używamy wywołań asynchronicznych (.aio) z nowego SDK i szybszego modelu 2.5
         response = await self.client.aio.models.generate_content(
             model="gemini-2.5-flash", contents=[self.cv_file, prompt]
         )
@@ -53,20 +52,35 @@ class AIAgent:
                 f"Firma: {job.employer}\n"
                 f"Stanowisko: {job.position}\n"
                 f"Wymagania: {job.requirements}\n"
+                f"Opis: {job.description}"
             )
 
         prompt = f"""
         Przeanalizuj poniższe {len(jobs)} ofert pracy pod kątem mojego CV. 
-        Dla każdej oferty (po ID) wystaw ocenę match_score (0-100) oraz krótkie uzasadnienie.
-        
-        Oferty:
-        {offers_to_analyze}
-        
-        Zwróć wynik WYŁĄCZNIE jako czysty JSON (bez Markdown):
+
+        Twoim zadaniem jest ocena dopasowania oraz wskazanie konkretnych kroków, które zwiększą szanse na zdobycie danej pracy. Przy wystawianiu "match_score" (0-100) weź pod uwagę:
+        1. Skille i ich transferowalność: Jeśli nie znam technologii X, ale znam bardzo podobną technologię Y (np. Selenium -> Playwright, React -> Vue), potraktuj to jako wysoki potencjał i uwzględnij to w ocenie.
+        2. Doświadczenie i Seniority: Zgodność lat pracy oraz poziomu odpowiedzialności.
+        3. Kontekst projektów: Czy moje projekty rozwiązują problemy podobne do tych w ogłoszeniu?
+
+        Dla każdej oferty zwróć:
+        - "match_score": liczba 0-100.
+        - "reason": krótkie uzasadnienie (skille + doświadczenie + projekty).
+        - "cv_optimization": co konkretnie zmienić lub uwypuklić w opisie moich projektów, aby lepiej "klikały" z tą ofertą.
+        - "quick_wins": lista 1-2 technologii/pojęć, których mogę się nauczyć w weekend (mając moją bazę), aby zamknąć lukę w wymaganiach.
+
+        Zwróć wynik WYŁĄCZNIE jako czysty JSON (bez Markdown i zbędnego tekstu):
         {{
-            "0": {{"match_score": 85, "reason": "Znasz Pythona i Playwright, pasuje."}},
-            "1": {{"match_score": 20, "reason": "Wymagają Javy, której nie znasz."}}
+            "ID_OFERTY": {{
+                "match_score": 85,
+                "reason": "Masz mocny stack w Pythonie i doświadczenie w dużych systemach, co pasuje do profilu firmy.",
+                "cv_optimization": "W projekcie 'X' podkreśl użycie asynchroniczności, bo oferta kładzie na to nacisk.",
+                "quick_wins": "Naucz się podstaw Playwright (znasz Selenium, więc zajmie Ci to 2h) oraz poznaj podstawy AWS Lambda."
+            }}
         }}
+
+        Oferty do analizy:
+        {offers_to_analyze}
         """
 
         try:
