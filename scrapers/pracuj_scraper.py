@@ -97,21 +97,16 @@ class PracujScraper(BaseScraper):
         DUPLICATE_LIMIT = 10
         new_jobs: list[JobOffer] = []
 
-        # Semafora ogranicza nas do 3 równoległych zadań
-        # To chroni przed błędem 1015, ale jest 3x szybsze niż pętla for
         sem = asyncio.Semaphore(3)
 
         async def throttled_scrape(url):
             async with sem:
-                # Losowa, ale krótsza pauza przed startem, żeby nie uderzyć 3x w tej samej ms
                 await asyncio.sleep(random.uniform(1.0, 2.5))
                 result = await self.scrape_single_offer(url)
-                # Krótki odpoczynek po pobraniu
                 await asyncio.sleep(random.uniform(1.5, 3.0))
                 return result
 
         max_page = await self.max_page()
-
         for page_number in range(max_page):
             logger.info(
                 f"Strona {page_number + 1}/{max_page} | Zebrano: {len(new_jobs)}"
@@ -131,7 +126,6 @@ class PracujScraper(BaseScraper):
                 unique_urls_to_scrape.append(url)
 
             if unique_urls_to_scrape:
-                # Odpalamy paczkę zadań, ale Semafora dopilnuje, by tylko 3 szły naraz
                 tasks = [throttled_scrape(url) for url in unique_urls_to_scrape]
                 results = await asyncio.gather(*tasks)
 
@@ -142,7 +136,10 @@ class PracujScraper(BaseScraper):
             if page_number + 1 >= max_page:
                 break
 
-            await self.next_page()
+            # await self.next_page()
+            await self.page.goto(
+                "https://it.pracuj.pl/praca/test%20automation%20engineer;kw?sc=0&pn=2&itth=37"
+            )
 
         return new_jobs
 
