@@ -14,15 +14,19 @@ async def send_telegram_alert(job: JobOffer, analysis: dict):
 
     score = analysis.get("match_score", 0)
     reason = analysis.get("reason", "Brak uzasadnienia")
+    cv_tip = analysis.get("cv_optimization", "Brak wskazówek")
+    quick_win = analysis.get("quick_wins", "Brak sugestii")
 
     # Formatujemy wiadomość w prostym HTML-u dla Telegrama
     text = (
-        f"🚀 <b>Nowa oferta! (Match: {score}%)</b>\n\n"
+        f"🚀 <b>NOWA OFERTA! (Match: {score}%)</b>\n\n"
         f"🏢 <b>Firma:</b> {job.employer}\n"
         f"💼 <b>Stanowisko:</b> {job.position}\n"
-        f"💰 <b>Wynagrodzenie:</b> {job.salary}\n\n"
-        f"🤖 <b>AI ocenia:</b> <i>{reason}</i>\n\n"
-        f"🔗 <a href='{job.url}'>Aplikuj tutaj</a>"
+        f"💰 <b>Płaca:</b> {job.salary}\n\n"
+        f"🤖 <b>AI Insight:</b>\n<i>{reason}</i>\n\n"
+        f"📝 <b>TIP do CV:</b>\n<u>{cv_tip}</u>\n\n"
+        f"💡 <b>Weekendowy cel (Quick Win):</b>\n{quick_win}\n\n"
+        f"🔗 <a href='{job.url}'>ZOBACZ OGŁOSZENIE</a>"
     )
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"

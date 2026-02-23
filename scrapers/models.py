@@ -10,3 +10,7 @@ class JobOffer(BaseModel):
     url: str
     description: str
     status: str
+
+
+class JobOfferRecord(JobOffer):
+    row_index: int
