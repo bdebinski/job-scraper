@@ -124,28 +124,27 @@ async def main():
             continue
 
         batch_size = 15
-        if platform == "JustJoinIT":
-            pass
-        else:
-            for i in range(0, len(jobs_by_sheet[platform]), batch_size):
-                batch = jobs_by_sheet[platform][i : i + batch_size]
-                logger.info(f"🧠 AI analizuje paczkę {len(batch)} ofert...")
-                batch_results = await agent.evaluate_jobs_batch(batch)
-                for idx, job in enumerate(batch):
-                    analysis = batch_results.get(str(idx), {})
-                    score = analysis.get("match_score", 0)
-                    status_text = f"{score}/100 - {analysis.get('reason')}"
-                    logger.info(
-                        f"Aktualizacja wiersza {job.row_index} w {platform} (Score: {score})"
-                    )
+     
 
-                    current_sheet.update_cell(
-                        job.row_index, status_col_idx, status_text
-                    )
-                    if score >= 75:
-                        await send_telegram_alert(job, analysis)
+        for i in range(0, len(jobs_by_sheet[platform]), batch_size):
+            batch = jobs_by_sheet[platform][i : i + batch_size]
+            logger.info(f"🧠 AI analizuje paczkę {len(batch)} ofert...")
+            batch_results = await agent.evaluate_jobs_batch(batch)
+            for idx, job in enumerate(batch):
+                analysis = batch_results.get(str(idx), {})
+                score = analysis.get("match_score", 0)
+                status_text = f"{score}/100 - {analysis.get('reason')}"
+                logger.info(
+                    f"Aktualizacja wiersza {job.row_index} w {platform} (Score: {score})"
+                )
 
-                await asyncio.sleep(5)
+                current_sheet.update_cell(
+                    job.row_index, status_col_idx, status_text
+                )
+                if score >= 75:
+                    await send_telegram_alert(job, analysis)
+
+            await asyncio.sleep(5)
 
 
 if __name__ == "__main__":
