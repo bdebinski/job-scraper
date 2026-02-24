@@ -15,22 +15,17 @@ from .parsers import PracujOfferParser
 class PracujScraper(BaseScraper):
     def __init__(self, page):
         super().__init__(page, nav_locators=PRACUJ_NAV)
-        self.url = "https://pracuj.pl/"
+        self.base_search_url = ""
 
     def get_parser(self, page):
         return PracujOfferParser(page, locators=PRACUJ_OFFER)
 
     async def search(self, keywords: str) -> None:
-        """Wyszukiwanie z ludzkim tempem pisania i obsługą błędów."""
-
         formattted_keyword = keywords.replace(" ", "%20")
-        search_url = f"https://it.pracuj.pl/praca/{formattted_keyword};kw?sc=0&itth=37"
-        try:
-            await self.page.goto(search_url, wait_until="domcontentloaded")
-            # await self.page.wait_for_selector(self.nav_locators.offers_list, timeout=15000)
-            await asyncio.sleep(2)
-        except Exception as e:
-            logger.error(f"💥 Błąd podczas ładowania wyszukiwarki: {e}")
+        self.base_search_url = f"https://it.pracuj.pl/praca/{formattted_keyword};kw?sc=0&itth=37"
+        await self.page.goto(self.base_search_url, wait_until="domcontentloaded")
+        await asyncio.sleep(2)
+      
 
     async def jobs_list(self) -> list[str]:
         """Pobieranie listy ofert z delikatnym przewijaniem."""
@@ -67,19 +62,15 @@ class PracujScraper(BaseScraper):
             max_page = 1
         return max_page
 
-    async def next_page(self) -> None:
-        """Przejście do następnej strony z losową pauzą."""
-        if not self.nav_locators.next_page:
-            logger.warning("No selector for next_page in config.")
-            return
-        await asyncio.sleep(random.uniform(2.0, 4.0))
-        await self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        await asyncio.sleep(0.5)
-        await self.page.locator(self.nav_locators.next_page).click()
-        await self.page.wait_for_load_state("load")
+    async def go_to_page(self, page_number) -> None:
+        target_url = f"{self.base_search_url}&pn={page_number}"
+        logger.info(f"Moving to next page: {page_number}: {target_url}")
+        
+        await self.page.goto(target_url, wait_until="domcontentloaded")
+        await asyncio.sleep(random.uniform(1.5, 3.0))
+        
 
     async def sort_offers_from_newest(self):
-        """PRZYWRÓCONE: Sortowanie ofert od najnowszych."""
         try:
             await asyncio.sleep(random.uniform(1.0, 2.0))
             dropdown = self.page.locator(self.nav_locators.sort_button)
@@ -97,7 +88,7 @@ class PracujScraper(BaseScraper):
         DUPLICATE_LIMIT = 10
         new_jobs: list[JobOffer] = []
 
-        sem = asyncio.Semaphore(3)
+        sem = asyncio.Semaphore(20)
 
         async def throttled_scrape(url):
             async with sem:
@@ -107,9 +98,9 @@ class PracujScraper(BaseScraper):
                 return result
 
         max_page = await self.max_page()
-        for page_number in range(max_page):
+        for page_number in range(1, max_page+1):
             logger.info(
-                f"Strona {page_number + 1}/{max_page} | Zebrano: {len(new_jobs)}"
+                f"Strona {page_number }/{max_page} | Zebrano: {len(new_jobs)}"
             )
             offer_urls = await self.jobs_list()
 
@@ -133,13 +124,10 @@ class PracujScraper(BaseScraper):
                     if res:
                         new_jobs.append(res)
 
-            if page_number + 1 >= max_page:
+            if page_number >= max_page:
                 break
 
-            # await self.next_page()
-            await self.page.goto(
-                "https://it.pracuj.pl/praca/test%20automation%20engineer;kw?sc=0&pn=2&itth=37"
-            )
+            await self.go_to_page(page_number+1)
 
         return new_jobs
 
