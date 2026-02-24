@@ -150,7 +150,7 @@ class BaseScraper(ABC):
                 await offer_page.goto(url)
                 parser = self.get_parser(offer_page)
                 job_data = await parser.parse()
-                logger.info(f"Scraped: {job_data}")
+                logger.info(f"Scraped: {job_data.position} in {job_data.employer}")
                 return job_data
             except Exception as e:
                 logger.error(f"Failed to scrape {url}: {e}")
