@@ -2,7 +2,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from google_sheets_client import GoogleSheetClient
+from services.google_sheets_client import GoogleSheetClient
 from main import main
 
 
