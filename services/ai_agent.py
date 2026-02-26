@@ -9,14 +9,12 @@ load_dotenv()
 
 class AIAgent:
     def __init__(self, cv_path: str):
-        # Nowy, oficjalny klient SDK dla Google GenAI
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
         if not os.path.exists(cv_path):
             raise FileNotFoundError(f"Nie znaleziono pliku CV: {cv_path}")
 
         logger.info(f"Wgrywam plik CV do Google (Nowe API): {cv_path}")
-        # Wgrywamy plik raz na starcie aplikacji
         self.cv_file = self.client.files.upload(
             file=cv_path, config={"display_name": "CV_Bartek"}
         )
@@ -28,7 +26,7 @@ class AIAgent:
         Jesteś moim osobistym doradcą zawodowym. Przeanalizuj moje CV i wygeneruj 
         dokładnie 3 KRÓTKIE, standardowe frazy kluczowe (max 2-3 słowa każda) do wyszukiwarki portali pracy (np. JustJoin.it, Pracuj.pl). 
         Muszą to być popularne nazwy stanowisk, których używa HR. Unikaj długich, specyficznych zdań.
-        Celuj w moje mocne strony, ale skup się na QA i stanowiskach testerskich: automatyzacja w Pythonie, backend, SDET.
+        Celuj w moje mocne strony, ale skup się na QA i stanowiskach testerskich: automatyzacja w Pythonie, SDET.
         
         Zwróć TYLKO czysty JSON: {"keywords": ["fraza1", "fraza2", "fraza3"]}
         """

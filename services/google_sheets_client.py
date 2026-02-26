@@ -3,7 +3,7 @@ from loguru import logger
 import gspread
 from gspread import Spreadsheet, Worksheet, WorksheetNotFound, SpreadsheetNotFound
 
-from scrapers.config import ScraperConfig
+from core.config import ScraperConfig
 
 
 class GoogleSheetClient:

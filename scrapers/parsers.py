@@ -4,7 +4,7 @@ from playwright.async_api import Page
 from scrapers.utils.data_parsers import clean_job_description
 
 from .locators import OfferPageLocators
-from .models import JobOffer
+from core.models import JobOffer
 
 
 class PracujOfferParser:

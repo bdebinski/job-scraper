@@ -1,7 +1,7 @@
 import os
 import httpx
 from loguru import logger
-from scrapers.models import JobOffer
+from core.models import JobOffer
 
 
 async def send_telegram_alert(job: JobOffer, analysis: dict):
