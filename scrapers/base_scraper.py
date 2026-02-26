@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import playwright.async_api
-from playwright.async_api import Page, TimeoutError as PlaywrightTimeoutError
+from playwright.async_api import Page
 from loguru import logger
 
 from scrapers.locators import NavigationLocators
-from scrapers.models import JobOffer
+from core.models import JobOffer
 
 
 class BaseScraper(ABC):
@@ -29,6 +29,8 @@ class BaseScraper(ABC):
 
         Args:
             page: Playwright Page object used for web interactions.
+            nav_locators: NavigationLocators for specific web scraper.
+            semaphore_value: number of pages which can be open at once
         """
         self.page = page
         self.nav_locators = nav_locators
@@ -37,8 +39,6 @@ class BaseScraper(ABC):
         self.sem = asyncio.Semaphore(semaphore_value)
 
     async def navigate(self):
-        if not self.page:
-            self.page = await self.context.new_page()
         await self.go_to_page(self.url)
 
     @abstractmethod
@@ -99,7 +99,7 @@ class BaseScraper(ABC):
             locator (str): The locator of the input element.
             text (str): The text to type.
         """
-        await self.page.locator(locator).type(text)
+        await self.page.locator(locator).fill(text)
 
     async def click_locator(self, locator):
         """
@@ -117,8 +117,6 @@ class BaseScraper(ABC):
     @staticmethod
     def strip_url(url: str) -> str:
         return url.split("?", 1)[0]
-
-    async def sort_offers_from_newest(self): ...
 
     @abstractmethod
     def get_parser(self, page: Page) -> Any: ...
@@ -180,30 +178,10 @@ class BaseScraper(ABC):
 
         async def intercept(route):
             if route.request.resource_type in excluded_resources:
-                # logger.debug(f"🛑 Zablokowano: {route.request.resource_type} - {route.request.url[:50]}...")
+                # logger.debug(f"Blocked: {route.request.resource_type} - {route.request.url[:50]}...")
                 await route.abort()
             else:
                 await route.continue_()
 
-        # Rejestrujemy przechwytywanie dla wszystkich URL-i
         await self.page.context.route("**/*", intercept)
-        logger.info(f"🛡️ Intercepcja sieci aktywna dla {self.__class__.__name__}")
-
-
-def handle_exceptions(field_name: str):
-    def decorator(func):
-        async def wrapper(*arg, **kwargs):
-            try:
-                result = await func(*arg, **kwargs)
-                logger.debug(f"{field_name} found{f': {result}' if result else ''}")
-            except PlaywrightTimeoutError:
-                logger.warning(f"{field_name} name not found")
-                result = "Not found"
-            except Exception as e:
-                logger.error(f"Unexpected error getting {field_name} field:  {e}")
-                result = "Not found"
-            return result
-
-        return wrapper
-
-    return decorator
+        logger.info(f"Network interception active for {self.__class__.__name__}")
