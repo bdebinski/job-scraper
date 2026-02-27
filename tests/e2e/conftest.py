@@ -8,7 +8,7 @@ from scrapers.pracuj_scraper import PracujScraper
 async def browser_fixture():
     async with async_playwright() as p:
         browser = await p.chromium.launch(
-            headless=False,
+            headless=True,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
@@ -37,5 +37,5 @@ async def page_fixture(context_fixture):
 
 
 @pytest.fixture
-def pracuj_scraper(context_fixture, browser_fixture):
-    return PracujScraper(context_fixture, browser_fixture)
+def pracuj_scraper(page_fixture):
+    return PracujScraper(page_fixture)

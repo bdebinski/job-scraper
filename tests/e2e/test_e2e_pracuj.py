@@ -29,9 +29,7 @@ async def test_search_results_locators_are_available(page_fixture, pracuj_scrape
     # Arrange
     await pracuj_scraper.navigate()
     await pracuj_scraper.accept_cookies()
-    await pracuj_scraper.search(
-        "python"
-    )
+    await pracuj_scraper.search("python")
 
     # Assert
     await expect(page_fixture.locator(PRACUJ_NAV.offers_list).first).to_be_visible(
