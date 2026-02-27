@@ -3,18 +3,24 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
+[requires]
+python_version = "3.12"
+
 [packages]
 playwright = "*"
 requests = "*"
-pytest-asyncio = "*"
-pytest-cov = "*"
 gspread = "*"
 loguru = "*"
 python-dotenv = "*"
 playwright-stealth = "*"
-pydantic = "*"
+pydantic = ">=2.0"
+google-genai = "*"
+markdownify = "*"
+ruff = "*"
+mypy = "*"
 
 [dev-packages]
 pytest = "*"
 pytest-asyncio = "*"
-pytest-playwright = "*"
+vulture = "*"
+pytest-cov = "*"
