@@ -2,8 +2,8 @@ import asyncio
 
 import httpx
 from loguru import logger
-
-from scrapers.models import JobOffer
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+from core.models import JobOffer
 from scrapers.utils.data_parsers import clean_job_description, extract_salary_pln
 from .base_scraper import BaseScraper
 from .locators import JJIT_OFFER, JJIT_NAV
@@ -20,14 +20,10 @@ class JustJoinItScraper(BaseScraper):
 
     def __init__(self, page):
         super().__init__(page, nav_locators=JJIT_NAV)
-        self.url = "https://justjoin.it/"
         self.nav_locators = JJIT_NAV
 
     def get_parser(self, page):
         return JustJoinItOfferParser(page, locators=JJIT_OFFER)
-
-    def get_location_dropdown(self, location):
-        return self.page.get_by_role("option", name=location)
 
     async def search(self, keywords: str, location: str = "all-locations") -> None:
         """
@@ -45,10 +41,10 @@ class JustJoinItScraper(BaseScraper):
                 self.nav_locators.offers_list, timeout=15000
             )
             await asyncio.sleep(2)
-        except Exception as e:
-            logger.error(f"💥 Błąd podczas ładowania wyszukiwarki: {e}")
+        except PlaywrightTimeoutError as e:
+            logger.error(f"Can't find new offers {e}")
 
-    async def jobs_list(self) -> list:
+    async def jobs_list(self) -> list[str]:
         """
         Retrieve a list of job offer elements from the current page.
 
@@ -66,53 +62,48 @@ class JustJoinItScraper(BaseScraper):
 
         return urls
 
-    async def sort_offers_from_newest(self):
-        await self.page.wait_for_timeout(500)
-        dropdown = self.page.locator("[name='sort_filter_button']").first
-        await dropdown.click()
-        await self.page.locator("[role='menuitem']", has_text="Latest").click()
-        await self.page.wait_for_timeout(2000)
+    async def extract_job_data(
+        self, offer_links_from_sheet: list[str]
+    ) -> list[JobOffer] | list:
+        """
+        Collect offers from website and fetch them via candidate API.
 
-    async def extract_job_data(self, offer_links_from_sheet: list):
-        logger.info("🕵️ Zbieram najnowsze oferty z góry listy...")
+        Args:
+            offer_links_from_sheet (list[str]): urls from google sheets to avoid offer duplication
 
+        Returns:
+            list[JobOffer]: list with offer's data
+            list: empty list when exception is raised or there is no new offers.
+        """
+        logger.info("Colecting new offers.")
         try:
             offer_elements = await self.jobs_list()
             urls = list(dict.fromkeys(offer_elements))
 
             new_urls = [u for u in urls if u not in offer_links_from_sheet]
-            logger.info(
-                f"🚀 Znalazłem {len(urls)} ofert na stronie. Z tego NOWYCH: {len(new_urls)}"
-            )
+            logger.info(f"{len(urls)} offers found, new offers: {len(new_urls)}")
 
             if not new_urls:
-                logger.info("💤 Brak nowych ofert. Kończę pracę.")
+                logger.info("There is no new offers")
                 return []
 
             new_jobs = []
             for url in new_urls:
-                slug = url.split("/job-offer/")[-1].split("?")[
-                    0
-                ]  # Wyciągamy czysty slug
-                logger.info(f"⬇️ Pobieram dane przez API dla: {slug}")
-
-                # Pobieramy szczegóły przez szybkie API
+                slug = url.split("/job-offer/")[-1].split("?")[0]
+                logger.info(f"Fetching API data for: {slug}")
                 job_data = await self.fetch_details_via_api(slug, url)
 
                 if job_data:
                     new_jobs.append(job_data)
-
-                # Oddech dla serwerów JustJoinIT
                 await asyncio.sleep(1)
 
             return new_jobs
 
         except Exception as e:
-            logger.error(f"💥 Błąd podczas wyciągania danych: {e}")
+            logger.error(f"Error during fetch: {e}")
             return []
 
-    async def fetch_details_via_api(self, slug: str, full_url: str):
-        """KROK 4: Strzał do API po pełny opis (bez Playwrighta)"""
+    async def fetch_details_via_api(self, slug: str, full_url: str) -> JobOffer | None:
         api_url = f"https://justjoin.it/api/candidate-api/offers/{slug}"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -125,23 +116,18 @@ class JustJoinItScraper(BaseScraper):
                 resp = await client.get(api_url, headers=headers)
                 if resp.status_code == 200:
                     data = resp.json()
-                    # 1. Wyciąganie skilli
                     skills = ", ".join(
                         [s.get("name", "") for s in data.get("requiredSkills", [])]
                     )
 
-                    # 2. Wyciąganie widełek płacowych
                     salary = extract_salary_pln(data.get("employmentTypes", []))
 
-                    # 3. Wyciąganie opisu (kluczowe dla Gemini)
                     description = (
                         clean_job_description(
                             data.get("description") or data.get("body")
                         )
-                        or "Brak opisu"
+                        or "No description"
                     )
-
-                    # Zwracamy słownik (dopasuj klucze do swojego arkusza)
 
                     job_data = {
                         "employer": data.get("companyName"),
@@ -152,14 +138,10 @@ class JustJoinItScraper(BaseScraper):
                         "description": description,
                         "status": "TO_ANALYZE",
                     }
-
-                    # 2. TUTAJ ZMIANA: Zwracamy model, a nie słownik
                     return JobOffer(**job_data)
                 else:
-                    logger.warning(
-                        f"⚠️ API zwróciło status {resp.status_code} dla {slug}"
-                    )
+                    logger.warning(f"API returned {resp.status_code} for {slug}")
             except Exception as e:
-                logger.error(f"❌ Błąd połączenia z API dla {slug}: {e}")
+                logger.error(f"Connection issue with API for {slug}: {e}")
 
         return None

@@ -38,17 +38,16 @@ class BaseScraper(ABC):
         self.all_jobs: list[str] = []
         self.sem = asyncio.Semaphore(semaphore_value)
 
-    async def navigate(self):
+    async def navigate(self) -> None:
         await self.go_to_page(self.url)
 
     @abstractmethod
-    async def search(self, keywords) -> None:
+    async def search(self, keywords: str) -> None:
         """
         Perform a job search on the website.
 
         Args:
             keywords (str): Search keywords.
-            location (str): Job location.
 
         Raises:
             NotImplementedError: Must be implemented in subclass.
@@ -66,9 +65,11 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    async def extract_job_data(self, offer_links_from_sheet: list): ...
+    async def extract_job_data(
+        self, offer_links_from_sheet: list
+    ) -> list[JobOffer]: ...
 
-    async def accept_cookies(self):
+    async def accept_cookies(self) -> None:
         """
         Accept cookie consent on the website.
 
@@ -79,10 +80,8 @@ class BaseScraper(ABC):
             await self.click_locator(self.nav_locators.cookie_locator)
         except playwright.async_api.TimeoutError:
             logger.info("No cookie banner visible - assuming cookies already accepted.")
-        if type(self).__name__ == "PracujScraper":
-            await self.page.get_by_role("button", name="Zamknij").click()
 
-    async def go_to_page(self, url):
+    async def go_to_page(self, url: str) -> None:
         """
         Navigate to a specific URL.
 
@@ -91,7 +90,7 @@ class BaseScraper(ABC):
         """
         await self.page.goto(url)
 
-    async def type_text(self, locator, text):
+    async def type_text(self, locator: str, text: str) -> None:
         """
         Type text into an input field.
 
@@ -101,7 +100,7 @@ class BaseScraper(ABC):
         """
         await self.page.locator(locator).fill(text)
 
-    async def click_locator(self, locator):
+    async def click_locator(self, locator: str) -> None:
         """
         Click on an element.
 
@@ -110,12 +109,23 @@ class BaseScraper(ABC):
         """
         await self.page.locator(locator).click()
 
-    async def get_url(self, page) -> str:
-        """Return the URL of the current job offer."""
+    async def get_url(self, page: Page) -> str:
+        """
+        Return the URL of the current job offer.
+
+        Args:
+            page (Page): page object
+        """
         return self.strip_url(page.url)
 
     @staticmethod
     def strip_url(url: str) -> str:
+        """
+        Strip url to remove random generated content in the link.
+
+        Args:
+            url (str): url of the offer.
+        """
         return url.split("?", 1)[0]
 
     @abstractmethod
@@ -134,13 +144,7 @@ class BaseScraper(ABC):
             url (str): URL of the job offer page to scrape.
 
         Returns:
-            Optional[Dict]: A dictionary containing the scraped job data with the keys:
-                - "employer" (str | None): Name of the employer.
-                - "position" (str | None): Name of the job position.
-                - "earning" (str | None): Salary or earning information.
-                - "requirements" (List[str] | None): List of job requirements.
-                - "url" (str): The original job offer URL.
-              Returns None if scraping fails or no data is found.
+            JobOffer or None if there is no JobOffers
         """
         async with self.sem:
             offer_page = await self.page.context.new_page()
@@ -158,14 +162,24 @@ class BaseScraper(ABC):
 
     @staticmethod
     def _validate_scraper_params(keywords, location) -> tuple[str, str]:
-        """Checks if keywords and location are not empty or whitespaces inputs."""
+        """
+        Check if keywords and location are non empty or whitespace
+
+        Args:
+            keywords (str): job position keywods.
+            location (str): city name.
+        """
         if not keywords or not keywords.strip():
             raise ValueError("Keywords can't be empty or whitespace")
         if not location or not location.strip():
             raise ValueError("Location can't be empty or whitespace")
         return keywords, location
 
-    async def setup_network_interception(self):
+    async def setup_network_interception(self) -> None:
+        """
+        Setup newtork interception to block redundant content from website. Blocks images, media, font, imageset, beacon and stylesheet.
+
+        """
         excluded_resources = [
             "image",
             "media",
