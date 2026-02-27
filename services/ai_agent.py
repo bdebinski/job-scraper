@@ -12,13 +12,13 @@ class AIAgent:
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
         if not os.path.exists(cv_path):
-            raise FileNotFoundError(f"Nie znaleziono pliku CV: {cv_path}")
+            raise FileNotFoundError(f"No CV file: {cv_path}")
 
-        logger.info(f"Wgrywam plik CV do Google (Nowe API): {cv_path}")
+        logger.info(f"Uploading CV from path: {cv_path}")
         self.cv_file = self.client.files.upload(
             file=cv_path, config={"display_name": "CV_Bartek"}
         )
-        logger.success("CV załadowane pomyślnie! Mózg operacji gotowy.")
+        logger.success("CV uploaded!")
 
     async def get_search_keywords(self) -> list:
         """Generuje frazy wyszukiwania na podstawie CV"""
@@ -38,11 +38,9 @@ class AIAgent:
         return json.loads(clean_json)["keywords"]
 
     async def evaluate_jobs_batch(self, jobs: list) -> dict:
-        """Ocenia paczkę ofert w jednym zapytaniu (oszczędność limitu RPD)."""
         if not jobs:
             return {}
 
-        # Przygotowanie tekstu z ofertami do promptu
         offers_to_analyze = ""
         for i, job in enumerate(jobs):
             offers_to_analyze += (
@@ -92,11 +90,10 @@ class AIAgent:
             clean_text = raw_text.replace("```json", "").replace("```", "").strip()
             return json.loads(clean_text)
         except Exception as e:
-            logger.error(f"Błąd analizy batchowej AI: {e}")
+            logger.error(f"AI analyze error: {e}")
             return {}
 
     def cleanup(self):
-        """Sprzątanie po sobie – usuwa plik z serwerów Google"""
-        logger.info("Usuwanie pliku CV z serwerów Google...")
+        logger.info("Deleting CV files from google serves.")
         self.client.files.delete(name=self.cv_file.name)
-        logger.success("Pamięć Google wyczyszczona.")
+        logger.success("Files deleted.")

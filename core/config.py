@@ -1,6 +1,9 @@
 import os
 from dataclasses import dataclass
 
+from scrapers.justjoinit_scraper import JustJoinItScraper
+from scrapers.pracuj_scraper import PracujScraper
+
 
 @dataclass
 class ScraperConfig:
@@ -17,6 +20,7 @@ class ScraperConfig:
     # Scraping
     max_open_pages: int = int(os.getenv("MAX_OPEN_PAGES", "5"))
     scroll_step: int = 400
+    SCRAPER_TO_SHEET = {PracujScraper: "Pracuj", JustJoinItScraper: "JustJoinIT"}
 
     # Timeouts
     page_load_timeout: int = 30000
