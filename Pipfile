@@ -18,6 +18,7 @@ google-genai = "*"
 markdownify = "*"
 ruff = "*"
 mypy = "*"
+pypdf = "*"
 
 [dev-packages]
 pytest = "*"

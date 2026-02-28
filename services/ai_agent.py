@@ -3,6 +3,7 @@ import json
 from google import genai
 from loguru import logger
 from dotenv import load_dotenv
+from pypdf import PdfReader
 
 load_dotenv()
 
@@ -15,10 +16,17 @@ class AIAgent:
             raise FileNotFoundError(f"No CV file: {cv_path}")
 
         logger.info(f"Uploading CV from path: {cv_path}")
-        self.cv_file = self.client.files.upload(
-            file=cv_path, config={"display_name": "CV_Bartek"}
-        )
+        self.cv_text = self._extract_text_from_pdf(cv_path)
         logger.success("CV uploaded!")
+    
+    def _extract_text_from_pdf(self, pdf_path: str) -> str:
+        """Reads pdf file and returns content as a string."""
+        reader = PdfReader(pdf_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+        return text
+        
 
     async def get_search_keywords(self) -> list:
         """Generuje frazy wyszukiwania na podstawie CV"""
@@ -31,7 +39,7 @@ class AIAgent:
         Zwróć TYLKO czysty JSON: {"keywords": ["fraza1", "fraza2", "fraza3"]}
         """
         response = await self.client.aio.models.generate_content(
-            model="gemini-2.5-flash", contents=[self.cv_file, prompt]
+            model="gemini-2.5-flash", contents=[f"MY CV CONTENT: {self.cv_file}", prompt]
         )
         raw_text = response.text or ""
         clean_json = raw_text.replace("```json", "").replace("```", "").strip()
@@ -82,7 +90,7 @@ class AIAgent:
         try:
             # Używamy modelu flash dla szybkości i wyższych limitów darmowych
             response = await self.client.aio.models.generate_content(
-                model="gemini-2.5-flash", contents=[self.cv_file, prompt]
+                model="gemini-2.5-flash", contents=[f"MY CV CONTENT: {self.cv_text}", prompt]
             )
 
             # Oczyszczanie odpowiedzi z ewentualnych znaczników markdown
@@ -93,7 +101,3 @@ class AIAgent:
             logger.error(f"AI analyze error: {e}")
             return {}
 
-    def cleanup(self):
-        logger.info("Deleting CV files from google serves.")
-        self.client.files.delete(name=self.cv_file.name)
-        logger.success("Files deleted.")
