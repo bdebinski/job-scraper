@@ -79,31 +79,27 @@ async def extract_offers(
     return results
 
 
-def upload_scraped_offers(
-    gc: GoogleSheetClient, scraped_data: dict[str, list[JobOffer]]
-):
-    logger.info("Saving offers to google sheets")
-    columns = [
-        "employer",
-        "position",
-        "salary",
-        "requirements",
-        "description",
-        "url",
-        "status",
-    ]
+def upload_scraped_offers(gc: GoogleSheetClient, scraped_data: dict[str, list[JobOffer]]):
+    """Uploads collected offers to their respective worksheets in bulk."""
+    logger.info("Saving offers to Google Sheets...")
+    columns = ["employer", "position", "salary", "requirements", "description", "url", "status"]
 
     for platform, offers in scraped_data.items():
         if not offers:
+            logger.info(f"No new offers to upload for {platform}.")
             continue
 
         rows_to_insert = [
-            [offer.model_dump().get(col, "") for col in columns] for offer in offers
+            [getattr(offer, col) or "" for col in columns] 
+            for offer in offers
         ]
 
-        worksheet = gc.spreadsheet.worksheet(platform)
-        worksheet.insert_rows(rows_to_insert, 2)
-        logger.success(f"Saved {len(offers)} offers to: {worksheet.title}")
+        try:
+            worksheet = gc.spreadsheet.worksheet(platform)
+            worksheet.insert_rows(rows_to_insert, 2)
+            logger.success(f"Saved {len(offers)} offers to {platform}.")
+        except Exception as e:
+            logger.error(f"Failed to upload to {platform}: {e}")
 
 
 def get_pending_offers(gc: GoogleSheetClient) -> dict[str, list[JobOfferRecord]]:
